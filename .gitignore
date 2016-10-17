@@ -1,3 +1,18 @@
+# toppers
+cfg*_out*
+kernel_cfg*
+offset*
+tinet_cfg*
+
+*.bin
+*.map
+*.srec
+*.syms
+*.timestamp
+
+deps/
+gen/
+
 # Object files
 *.o
 *.ko
