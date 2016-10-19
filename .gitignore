@@ -46,3 +46,9 @@ gen/
 # Debug files
 *.dSYM/
 *.su
+
+# Others
+set_env.sh
+.svn
+*.sublime-project
+*.sublime-workspace
