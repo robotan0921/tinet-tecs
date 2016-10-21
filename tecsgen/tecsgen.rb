@@ -35,7 +35,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: tecsgen.rb 2554 2016-02-27 06:11:34Z okuma-top $
+#   $Id: tecsgen.rb 2578 2016-05-08 10:03:47Z okuma-top $
 #++
 
 #= tecsgen  : TECS のジェネレータ
@@ -481,7 +481,9 @@ class TECSGEN
     # これを実行するまで tecsgen のバージョンを表示できない
     # このファイルを誤って読み込むと、異なるバージョン名を表示してしまう
     require_tecsgen_lib 'tecslib/version.rb'
-    if ! $no_banner || $print_version
+    if $tecscde_version then
+      STDERR << "tecscde version #{$tecscde_version} (tecsgen version #{$version})  #{$Copyright}\n"
+    elsif ! $no_banner || $print_version
       STDERR << "tecsgen  version #{$version}  #{$Copyright}\n"
     end
     if $verbose then
@@ -513,7 +515,7 @@ class TECSGEN
     require_tecsgen_lib 'tecslib/core/tecsgen.rb'
     require_tecsgen_lib 'tecslib/core/generate.rb'
     require_tecsgen_lib 'tecslib/core/gen_xml.rb'
-#    require_tecsgen_lib 'tecslib/core/tool_info.rb'
+    require_tecsgen_lib 'tecslib/core/tool_info.rb'
     require_tecsgen_lib 'tecslib/plugin/CelltypePlugin.rb'
     require_tecsgen_lib 'tecslib/plugin/CellPlugin.rb'
     require_tecsgen_lib 'tecslib/plugin/SignaturePlugin.rb'

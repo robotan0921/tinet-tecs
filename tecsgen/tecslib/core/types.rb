@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: types.rb 2296 2015-11-29 11:57:33Z okuma-top $
+#   $Id: types.rb 2587 2016-07-31 13:26:28Z okuma-top $
 #++
 
 #= HasType: @type を内部に持つ型のためのモジュール
@@ -1581,7 +1581,6 @@ class DescriptorType < Type
   end
 
   #== DescriptorType#
-  # 意味解析段階では nil が返される可能性に注意
   def get_signature
     Namespace.find @signature_nsp
   end

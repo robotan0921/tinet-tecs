@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: messages_file_en_US.rb 2061 2014-05-31 22:15:33Z okuma-top $
+#   $Id: messages_file_en_US.rb 2587 2016-07-31 13:26:28Z okuma-top $
 #++
 
 
@@ -225,6 +225,18 @@ class TECSMsg
 
 # @@comment[ :EPM_comment ] = "\n/* 受け口関数マクロ（短縮形） %s */\n"
 @@comment[ :EPM_comment ] = "\n/* entry port function macro (abbrev) %s */\n"
+
+# @@comment[ :CRD_comment ] = "\n/* ディスクリプタ参照関数 %s */\n"
+@@comment[ :CRD_comment ] = "/* refer to descriptor function %s */\n"
+
+# @@comment[ :CRDA_comment ] = "\n/* ディスクリプタ参照マクロ（短縮形） %s */\n"
+@@comment[ :CRDA_comment ] = "\n/* refer to descriptor macro (abbrev) %s */\n"
+
+# @@comment[ :SDF_comment ] = "/* ディスクリプタ設定関数 %s */\n"
+@@comment[ :SDF_comment ] = "/* set descriptor function %s */\n"
+
+# @@comment[ :SDMA_comment ] = "\n/* ディスクリプタ設定マクロ（短縮形） %s */\n"
+@@comment[ :SDMA_comment ] = "\n/* set descriptor macro (abbrev) %s */\n"
 
 # @@comment[ :CTIX_comment ] = "\n/* セルタイプのIDX型 %s */\n"
 @@comment[ :CTIX_comment ] = "\n/* celltype IDX type %s */\n"

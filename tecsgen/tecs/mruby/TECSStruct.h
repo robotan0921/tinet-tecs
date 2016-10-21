@@ -32,7 +32,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id: TECSStruct.h 936 2016-05-02 11:18:27Z coas-nagasima $ 
+ *   $Id: TECSStruct.h 2554 2016-02-27 06:11:34Z okuma-top $ 
  */
 
 #ifndef TECSStruct_h__

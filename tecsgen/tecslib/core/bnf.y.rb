@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: bnf.y.rb 2562 2016-03-21 11:48:59Z okuma-top $
+#   $Id: bnf.y.rb 2586 2016-06-19 11:17:08Z okuma-top $
 #++
 
 class Generator
@@ -377,7 +377,9 @@ struct_specifier		# mikan
 		}
         | STRUCT
 		{
-			result = StructType.new()
+			# tag が無い場合、内部名を与える
+			result = StructType.new( :"$TAG_#{@@no_struct_tag_num}" )
+			@@no_struct_tag_num += 1
 			StructType.set_define( true )
 		}
 	   '{' struct_declaration_list '}'
@@ -708,6 +710,7 @@ initializer_list
 component_description
         : component_description specified_statement
         | component_description location_information
+        | component_description tool_info
         | 
 
 specified_statement
@@ -1300,6 +1303,11 @@ composite_celltype_statement_specifier_list
 			Generator.add_statement_specifier val[0]
 			result = [ val[0] ]
 		}
+        | composite_celltype_statement_specifier_list ',' composite_celltype_statement_specifier
+		{
+			Generator.add_statement_specifier val[2]
+			result = val[0] << val[2]
+		}
 
 composite_celltype_statement_specifier
         : ALLOCATOR '(' alloc_list2 ')'		{ result = [ :ALLOCATOR, val[2] ] }
@@ -1349,6 +1357,7 @@ internal_join_list
         :   # 空行  061007
         | internal_join_list specified_join
         | internal_join_list external_join
+        | internal_join_list reverse_join
 
 external_join  # cell 内に記述する呼び口の外部結合
         : internal_cell_elem_name '=>' COMPOSITE '.' export_name ';'
@@ -1498,6 +1507,27 @@ bar_list
         | { result = [] }
 
 
+#  JSON object
+tool_info        : TOOL_INFO '(' JSON_string ')' JSON_object { TOOL_INFO.new( val[2].to_sym, val[4] ) }
+JSON_object      : '{' JSON_property_list   '}'              {  result = val[1] }
+JSON_property_list : JSON_string ':' JSON_value              { result = { val[0].to_sym => val[2] } }
+                 | JSON_property_list ',' JSON_string ':' JSON_value
+                                                             { val[0][ val[2].to_sym ] = val[4] }
+JSON_value       : JSON_string | JSON_number | JSON_object | JSON_array
+                 | TRUE { result=val[0].val } | FALSE  { result=val[0].val } # JSON_NULL # null not suppoted
+JSON_array       : '[' JSON_array_list ']'                   { result = val[1]  }
+                 | '['  ']'                                  { result = []  }
+JSON_array_list  : JSON_value                                { result = [ val[0] ] }
+                 | JSON_array_list ',' JSON_value            { val[0] << val[2] }
+JSON_string      : STRING_LITERAL                            { result = val[0].val.gsub!( /\"(.*)\"/, "\\1" ) }
+JSON_number      : INTEGER_CONSTANT                          { result = val[0].val.to_i }
+                 | FLOATING_CONSTANT                         { result = val[0].val.to_f }
+                 | '-' INTEGER_CONSTANT                      { result = - val[0].val.to_i }
+                 | '-' FLOATING_CONSTANT                     { result = - val[0].val.to_f }
+                 | '+' INTEGER_CONSTANT                      { result = val[0].val.to_i }
+                 | '+' FLOATING_CONSTANT                     { result = val[0].val.to_f }
+
+
 end
 
 ---- inner
@@ -1522,6 +1552,7 @@ end
     'import' => :IMPORT,
     'import_C' => :IMPORT_C,
     'generate' => :GENERATE,
+    '__tool_info__' => :TOOL_INFO,
 
     # types
     'void'    => :VOID,
@@ -1657,6 +1688,9 @@ end
 
   # すべての構文解析が完了した
   @@b_end_all_parse = false
+
+  # tag なし struct
+  @@no_struct_tag_num = 0
 
   def self.parse( file_name, plugin = nil, b_reuse = false )
     # パーサインスタンスを生成(別パーサで読み込む)

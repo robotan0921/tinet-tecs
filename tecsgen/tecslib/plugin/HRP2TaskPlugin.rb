@@ -120,6 +120,9 @@ EOT
                 # すべてのセルを走査してセルタイプをチェック
                 ct = cell.get_celltype
                 if ct.class == Celltype && check_celltype_list.include?( ct ) == false
+                    # チェック済みセルタイプに登録
+                    check_celltype_list << ct
+
                     # 未チェックのセルタイプだった場合
                     # puts "check for ATT_MOD : #{ct.classget_global_name}"
                     puts "check for ATT_MOD : #{ct.get_global_name}"
@@ -178,8 +181,6 @@ EOT
 
                     file.print "ATT_MOD(\"#{ct.get_global_name}.o\");\n"
                     file.close
-
-                    check_celltype_list << ct
                 else
                     # 何もしない
                 end

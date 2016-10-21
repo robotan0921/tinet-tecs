@@ -256,50 +256,52 @@ class HRP2KernelObjectPlugin < CelltypePlugin
 
                 puts "===== end check my domain #{cell.get_name} ====="
                 # SAC_XXXの生成
-                puts "===== begin check regions #{cell.get_name} ====="
-                p val[:accessPattern]
-                p val[:accessPattern].class
+                if !val[:accessPattern].nil?
+                    puts "===== begin check regions #{cell.get_name} ====="
+                    p val[:accessPattern]
+                    p val[:accessPattern].class
 
-                #ep = [ :eTaskActivate, :eTaskControl, :eTaskManage, :eTaskRefer ]
-                #各カーネルオブジェクトの受け口名を取得
-                # ep = get_entry_ports_name_list()
-                i = 0
-                acv = []
-                # アクセス許可ベクタの生成
-                val[:accessPattern].each { |acptnx|
-                    # アクセス許可パターンの生成
-                    if acptnx != "OMIT"
-                        acv << acptnx
-                        p acv[i]
-                    elsif cell_domain_type.get_option.to_s == "trusted"
-                        acv << "TACP_KERNEL"
-                        p acv[i]
-                    elsif cell_domain_type.get_option.to_s != "OutOfDomain"
-                        acv << "TACP(#{cell_domain_root.get_name.to_s})"
+                    #ep = [ :eTaskActivate, :eTaskControl, :eTaskManage, :eTaskRefer ]
+                    #各カーネルオブジェクトの受け口名を取得
+                    # ep = get_entry_ports_name_list()
+                    i = 0
+                    acv = []
+                    # アクセス許可ベクタの生成
+                    val[:accessPattern].each { |acptnx|
+                        # アクセス許可パターンの生成
+                        if acptnx != "OMIT"
+                            acv << acptnx
+                            p acv[i]
+                        elsif cell_domain_type.get_option.to_s == "trusted"
+                            acv << "TACP_KERNEL"
+                            p acv[i]
+                        elsif cell_domain_type.get_option.to_s != "OutOfDomain"
+                            acv << "TACP(#{cell_domain_root.get_name.to_s})"
+                        else
+                            acv << "TACP_SHARED"
+                        end
+
+                        i += 1
+                    }
+
+                    print "acv = "
+                    p acv
+
+                    #各種SACの生成
+                    domainOption = cell_domain_type.get_option
+                    # if cell.get_region.get_region_type == :DOMAIN
+                    if domainOption != "OutOfDomain"
+                        # 保護ドメインに属する場合
+                        file3 = AppFile.open( "#{$gen}/tecsgen_#{cell.get_region.get_name.to_s}.cfg" )
+                        print_cfg_sac(file3, val, acv)
+                        file3.close
                     else
-                        acv << "TACP_SHARED"
+                        # 無所属の場合
+                        print_cfg_sac(file2, val, acv)
                     end
 
-                    i += 1
-                }
-
-                print "acv = "
-                p acv
-
-                #各種SACの生成
-                domainOption = cell_domain_type.get_option
-                # if cell.get_region.get_region_type == :DOMAIN
-                if domainOption != "OutOfDomain"
-                    # 保護ドメインに属する場合
-                    file3 = AppFile.open( "#{$gen}/tecsgen_#{cell.get_region.get_name.to_s}.cfg" )
-                    print_cfg_sac(file3, val, acv)
-                    file3.close
-                else
-                    # 無所属の場合
-                    print_cfg_sac(file2, val, acv)
+                    puts "===== end check regions #{cell.get_name} ====="
                 end
-
-                puts "===== end check regions #{cell.get_name} ====="
             end
         }
 

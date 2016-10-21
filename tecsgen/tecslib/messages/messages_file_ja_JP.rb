@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: messages_file_ja_JP.rb 2061 2014-05-31 22:15:33Z okuma-top $
+#   $Id: messages_file_ja_JP.rb 2587 2016-07-31 13:26:28Z okuma-top $
 #++
 
 
@@ -126,6 +126,10 @@ class TECSMsg
 @@comment[ :CPM_comment ] = " /* 呼び口関数マクロ %s */\n"
 @@comment[ :CPMA_comment ] = "/* 呼び口関数マクロ（短縮形）%s */\n"
 @@comment[ :EPM_comment ] = "\n/* 受け口関数マクロ（短縮形） %s */\n"
+@@comment[ :CRD_comment ] = "/* ディスクリプタ参照関数 %s */\n"
+@@comment[ :CRDA_comment ] = "\n/* ディスクリプタ参照マクロ（短縮形） %s */\n"
+@@comment[ :SDF_comment ] = "/* ディスクリプタ設定関数 %s */\n"
+@@comment[ :SDMA_comment ] = "\n/* ディスクリプタ設定マクロ（短縮形） %s */\n"
 @@comment[ :CTIX_comment ] = "\n/* セルタイプのIDX型 %s */\n"
 @@comment[ :EPP_comment ] = "\n/* 受け口関数プロトタイプ宣言 %s */\n"
 @@comment[ :EPSP_comment ] = "\n/* 受け口スケルトン関数プロトタイプ宣言（VMT不要最適化により参照するもの） %s */\n"

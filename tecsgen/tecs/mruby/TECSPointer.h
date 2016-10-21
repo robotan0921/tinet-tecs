@@ -32,7 +32,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id: TECSPointer.h 936 2016-05-02 11:18:27Z coas-nagasima $ 
+ *   $Id: TECSPointer.h 2554 2016-02-27 06:11:34Z okuma-top $ 
  */
 
 #ifndef TECSPointer_h__

@@ -75,7 +75,6 @@ GEN_TAB_DEB =  $(LIB_PATH)/bnf-deb.tab.rb
 C_PARSER = $(LIB_PATH)/C_parser.y.rb
 C_TAB = $(LIB_PATH)/C_parser.tab.rb
 EXERB_EXE = tecsgen.exe
-EXERB_EXY = tecsgen.exy
 
 all: generator
 
@@ -104,25 +103,10 @@ yydebug : $(GEN_TAB_DEB)
 $(GEN_TAB_DEB) : $(BNF) $(GEN_SRC) $(PLUGIN_SRC)
 	racc -v -g -o $(GEN_TAB_DEB) $(BNF)	# yydebug を有効にする
 
-# exerb : $(EXERB_EXE)
-exerb :
-	@echo "!!! please build using ActiveScriptRuby !!!"
-	exit 1
-
-# $(EXERB_EXE) : $(EXERB_EXY) $(GEN_SRC) $(PLUGIN_SRC)
-#	exerb  $(EXERB_EXY)
-# tecsgen.exy.ini から tecsgen.exy を生成するのは util/release.sh により行われる
-# MANIFEST に記載のバージョン番号が、tecsgen.exy.ini の文字列置換により、埋め込まれる
-
-exerb_check : $(EXERB_EXE)
-
-$(EXERB_EXE) : $(EXERB_EXY) $(GEN_SRC) $(PLUGIN_SRC)
-	@echo "### Need make_tecsgen_exerb on ActiveScriptRuby to update tecsgen.exerb ###"
-
 print_error :	# エラーメッセージを拾い出す
 	grep -e "Generator\.error" -e cdl_error $(LIB_PATH)/*.rb \
 		| grep -v bnf.tab.rb \
-		| sed -e "s/\s*Generator\.error(/  /" -e "s/\s*cdl_error(//" -e "s/).*$$//"
+		| sed -e "s/\s*Generator\.error(//" -e "s/\s*cdl_error[0-9]*(//" -e "s/).*$$//"
 
 print_error2 :	# エラーメッセージを拾い出す
 	grep '[^A-Z][A-VXYZ][0-9][0-9][0-9][0-9]' $(LIB_PATH)/*.rb \

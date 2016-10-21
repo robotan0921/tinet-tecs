@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: optimize.rb 2300 2015-12-06 11:23:27Z okuma-top $
+#   $Id: optimize.rb 2587 2016-07-31 13:26:28Z okuma-top $
 #++
 
 =begin
@@ -237,6 +237,16 @@ class Celltype
         port.set_VMT_useless                          # VMT 不要最適化 (直接受け口関数を呼出す)
         if $verbose then
           print "optimized by omit: port: #{port.get_name} : o\n"
+        end
+        next
+      elsif port.is_dynamic? then
+        if $verbose then
+          print "unoptimized by dynamic: port: #{port.get_name}\n"
+        end
+        next
+      elsif port.is_ref_desc? then
+        if $verbose then
+          print "unoptimized by ref_desc: port: #{port.get_name}\n"
         end
         next
       end

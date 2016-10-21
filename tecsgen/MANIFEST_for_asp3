@@ -24,6 +24,7 @@ tecslib/core/pluginModule.rb
 tecslib/core/syntaxobj.rb
 tecslib/core/tecs_lang.rb
 tecslib/core/tecsgen.rb
+tecslib/core/tool_info.rb
 tecslib/core/types.rb
 tecslib/core/value.rb
 

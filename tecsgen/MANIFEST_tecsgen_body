@@ -1,12 +1,24 @@
 MANIFEST_tecsgen_body
 
 Makefile
-
+tecscde
+tecscde.rb
 tecsgen
 tecsgen.rb
+tecsgen_rcov
+tecsgen_rcov.rb
 tecsmerge
 tecsmerge.rb
-tecslib/version.rb
+
+cdelib/Makefile
+cdelib/cell_plugin_dialog.rb
+cdelib/cell_plugin_dialog_ui_definition.rb
+cdelib/palette.rb
+cdelib/saveload.rb
+cdelib/tcontrol.rb
+cdelib/tmodel.rb
+cdelib/tview.rb
+cdelib/version.rb
 
 tecslib/core/C_parser.tab.rb
 tecslib/core/C_parser.y.rb
@@ -25,14 +37,13 @@ tecslib/core/pluginModule.rb
 tecslib/core/syntaxobj.rb
 tecslib/core/tecs_lang.rb
 tecslib/core/tecsgen.rb
+tecslib/core/tool_info.rb
 tecslib/core/types.rb
 tecslib/core/value.rb
-
 tecslib/messages/messages_console_en_US.rb
 tecslib/messages/messages_console_ja_JP.rb
 tecslib/messages/messages_file_en_US.rb
 tecslib/messages/messages_file_ja_JP.rb
-
 tecslib/plugin/ATK1AlarmPlugin.rb
 tecslib/plugin/ATK1DelayTaskPlugin.rb
 tecslib/plugin/ATK1EventPlugin.rb
@@ -76,6 +87,7 @@ tecslib/plugin/lib/GenHRP2Marshaler.rb
 tecslib/plugin/lib/GenOpaqueMarshaler.rb
 tecslib/plugin/lib/GenParamCopy.rb
 tecslib/plugin/lib/GenTransparentMarshaler.rb
+tecslib/version.rb
 
 tecs/mruby/TECSPointer.h
 tecs/mruby/TECSStruct.h

@@ -33,7 +33,7 @@
  *   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *   の責任を負わない．
  *  
- *   $Id: tTDR_inline.h 936 2016-05-02 11:18:27Z coas-nagasima $
+ *   $Id: tTDR_inline.h 2032 2014-03-16 12:10:58Z okuma-top $
  */
 
 /* #[<PREAMBLE>]#
