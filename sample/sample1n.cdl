@@ -120,3 +120,12 @@ cell tBanner Banner {
 	targetName      = BannerTargetName;
 	copyrightNotice = BannerCopyrightNotice;
 };
+
+
+
+/*
+ *
+ *  TINET+TECS用
+ *
+ */
+import("../Debug/Debug.cdl");

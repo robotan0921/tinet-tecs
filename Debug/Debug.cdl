@@ -1,0 +1,46 @@
+import("tBuffer.cdl");
+import("netdev/if_mbed/tIfMbed.cdl");
+import("netdev/if_mbed/tIfMbedAdapter.cdl");
+
+cell tKernel Kernel{
+
+};
+
+[allocator(eNicDriver.start.outputp=NetworkBuffer.eNetworkAlloc, 
+			eNicDriver.read.inputp=NetworkBuffer.eNetworkAlloc)]
+cell tIfMbed IfMbed {
+	cSemaphoreSend 		= SemaphoreNicSend.eSemaphore;
+	ciSemaphoreReceive 	= SemaphoreNicReceive.eiSemaphore;
+	cInterruptRequest 	= NicInterrupt.eInterruptRequest;
+    
+    //cNetworkTimer = NetworkTimer.eNetworkTimer[0];
+
+	macaddr0 = 0x00;
+	macaddr1 = 0x00;
+	macaddr2 = 0x00;
+	macaddr3 = 0x00;
+	macaddr4 = 0x00;
+	macaddr5 = 0x00;
+};
+
+cell tIfMbedAdapter IfMbedAdapter {
+	cNicDriver = IfMbed.eNicDriver;
+};
+
+cell tSemaphore SemaphoreNicSend {
+    attribute 		= C_EXP("TA_TPRI");
+    initialCount 	= 1;
+    maxCount 		= 1;
+};
+cell tSemaphore SemaphoreNicReceive {
+    attribute 		= C_EXP("TA_TPRI");
+    initialCount 	= 0;
+    maxCount 		= 1;
+};
+cell tISRWithInterruptRequest NicInterrupt {
+	ciISRBody = IfMbed.eiBody;
+
+	interruptNumber 	= (0x200);
+	interruptAttribute 	= C_EXP("TA_ENAINT");
+	interruptPriority 	= -8;
+};
