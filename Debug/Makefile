@@ -103,7 +103,7 @@ DEVTOOLDIR =
 #  ユーティリティプログラムの名称
 #
 CFG = ruby -Eutf-8 $(SRCDIR)/cfg/cfg.rb
-TECSGEN = ruby -Eutf-8 $(SRCDIR)/tecsgen/tecsgen.rb
+TECSGEN = ruby -Eutf-8 $(SRCDIR)/tecsgen/tecsgen.rb -L.
 
 #
 #  オブジェクトファイル名の定義
@@ -461,7 +461,7 @@ clean:
 	rm -f offset.timestamp $(OFFSET_H)
 	rm -f cfg1_out.syms cfg1_out.srec $(CFG1_OUT)
 	rm -f cfg1_out.timestamp cfg1_out.c cfg1_out.db
-#	rm -rf $(TECSGENDIR)
+	rm -rf $(TECSGENDIR)
 ifndef KERNEL_LIB
 	rm -f libkernel.a
 endif
