@@ -15,12 +15,6 @@ cell tIfMbed IfMbed {
     
     //cNetworkTimer = NetworkTimer.eNetworkTimer[0];
 
-	macaddr0 = 0x00;
-	macaddr1 = 0x00;
-	macaddr2 = 0x00;
-	macaddr3 = 0x00;
-	macaddr4 = 0x00;
-	macaddr5 = 0x00;
 };
 
 cell tIfMbedAdapter IfMbedAdapter {

@@ -1,9 +1,11 @@
+import_C("tinet/netdev/if_mbed/if_mbed.h");
 
 signature sNicDriver {
-    void init(void);
+	void init(void);
     void start([send(sNetworkAlloc),size_is(size)] int8_t *outputp,[in]int32_t size,[in]uint8_t align);
     void read([receive(sNetworkAlloc),size_is(*size)]int8_t **inputp,[out]int32_t *size,[in]uint8_t align);
     void getMac([out,size_is(6)]uint8_t *macaddress);
+    void reset(void);
 };
 
 celltype tIfMbed {
@@ -18,16 +20,16 @@ celltype tIfMbed {
 	entry sNicDriver eNicDriver;
 	entry siHandlerBody eiBody;
 
-	attr {
+	var {
 		uint8_t macaddr0;
 		uint8_t macaddr1;
 		uint8_t macaddr2;
 		uint8_t macaddr3;
 		uint8_t macaddr4;
 		uint8_t macaddr5;
-	};
-	var {
+	
 		uint16_t timer;
+		T_IF_ETHER_NIC_SOFTC *sc;
 	};
 };
 /*

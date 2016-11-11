@@ -49,7 +49,9 @@
 #ifndef _IF_MBED_H_
 #define _IF_MBED_H_
 
+#ifndef TECSGEN // TODO
 #include "ethernet_api.h"
+#endif // TECSGEN
 
 /*
  *  NIC の選択マクロ
@@ -63,7 +65,14 @@
 #define IF_ETHER_NIC_RESET(i)		if_mbed_reset(i)
 #define IF_ETHER_NIC_START(i,o)		if_mbed_start(i,o)
 
-#define T_IF_ETHER_NIC_SOFTC		struct t_mbed_softc
+//#define T_IF_ETHER_NIC_SOFTC		struct t_mbed_softc	// TODO
+#ifndef T_IF_ETHER_NIC_SOFTC_DEFINED
+
+typedef struct t_mbed_softc T_IF_ETHER_NIC_SOFTC;
+
+#define T_IF_ETHER_NIC_SOFTC_DEFINED
+
+#endif	/* of #ifndef T_IF_ETHER_NIC_SOFTC_DEFINED */
 
 /* IPv6 関係 */
 
