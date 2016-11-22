@@ -97,8 +97,14 @@
 #include <stdlib.h>
 #endif
 
+#if 0 // for TECS
 extern uint8_t mac_addr[ETHER_ADDR_LEN];
+#endif
 
+// for TECS
+#define ETHER_EESR0_TC 0x00200000
+
+#if 1 // for TECS
 /*
  *  ネットワークインタフェースに依存するソフトウェア情報 
  */
@@ -115,7 +121,9 @@ typedef struct t_mbed_softc {
 
 /* ネットワークインタフェースに依存するソフトウェア情報 */
 
-static T_MBED_SOFTC mbed_softc;
+//static T_MBED_SOFTC mbed_softc;
+T_MBED_SOFTC mbed_softc;	// Debug
+
 
 /* ネットワークインタフェースに依存しないソフトウェア情報 */
 
@@ -132,7 +140,9 @@ T_IF_SOFTC if_softc = {
 
 #endif	/* of #ifdef SUPPORT_INET6 */
 };
+#endif
 
+#if 0 // for TECS
 /*
  *  局所変数
  */
@@ -144,6 +154,7 @@ static void if_mbed_init_sub (T_IF_SOFTC *ic);
 
 static uint32_t ds_crc (uint8_t *addr);
 static void ds_getmcaf (T_IF_SOFTC *ic, uint32_t *mcaf);
+
 
 /*
  *  ds_crc -- イーサネットアドレスの CRC を計算する。
@@ -215,6 +226,9 @@ if_mbed_addmulti (T_IF_SOFTC *ic)
 
 #endif	/* of #ifdef SUPPORT_INET6 */
 
+#endif
+
+#if 0	// For TECS
 /*
  *  mbed_stop -- ネットワークインタフェースを停止する。
  * 
@@ -226,7 +240,9 @@ if_mbed_stop (T_MBED_SOFTC *sc)
 {
 	ethernetext_start_stop(0);
 }
+#endif
 
+#if 0 // for TECS
 static void rza1_recv_callback(void) {
     sig_sem(if_softc.semid_rxb_ready);
 }
@@ -242,7 +258,9 @@ if_mbed_init_sub (T_IF_SOFTC *ic)
     ethcfg.ether_mac    = (char *)ic->ifaddr.lladdr;
     ethernetext_init(&ethcfg);
 }
+#endif
 
+#if 0	// For TECS
 /*
  * mbed_reset -- ネットワークインタフェースをリセットする。
  */
@@ -258,6 +276,7 @@ if_mbed_reset (T_IF_SOFTC *ic)
 
     ethernetext_start_stop(1);
 }
+#endif
 
 /*
  *  get_mbed_softc -- ネットワークインタフェースのソフトウェア情報を返す。
@@ -295,8 +314,11 @@ if_mbed_probe (T_IF_SOFTC *ic)
     netif->hwaddr[5] = MBED_MAC_ADDR_5;
 #else
     mbed_mac_address((char *)ic->ifaddr.lladdr);
+    syslog(LOG_EMERG, "Debug: ic->ifaddr.lladdr = 0x%x\n", ic->ifaddr.lladdr);
 #endif
 }
+
+#if 0 // for TECS
 
 #define ETHER_EESR0_TC 0x00200000
 
@@ -318,8 +340,11 @@ if_mbed_init (T_IF_SOFTC *ic)
 
 	ETHER.EESIPR0 |= ETHER_EESR0_TC;
 }
+#endif
 
 void if_mbed_phy_task(intptr_t arg) {
+	syslog(LOG_NOTICE, "Debug: if_mbed_phy_task is activated.\n");
+
 	T_IFNET *ether = ether_get_ifnet();
     int32_t connect_sts = 0;   /* 0: disconnect, 1:connect */
     int32_t link_sts;
@@ -328,16 +353,20 @@ void if_mbed_phy_task(intptr_t arg) {
 
     while (1) {
         link_sts = ethernet_link();
+        //syslog(LOG_EMERG, "Debug: link_sts = %d\n", link_sts);
         if (link_sts == 1) {
             link_mode_new = ethernetext_chk_link_mode();
+            //syslog(LOG_EMERG, "Debug: link_mode_new = %d\n", link_mode_new);
             if (link_mode_new != link_mode_old) {
                 if (connect_sts == 1) {
-                	ether_set_link_down(ether);
+                	syslog(LOG_NOTICE, "Debug: Connected.\n");
+               		ether_set_link_down(ether);	
                 }
                 if (link_mode_new != NEGO_FAIL) {
                     ethernetext_set_link_mode(link_mode_new);
                     ether_set_link_up(ether);
                     connect_sts = 1;
+                    syslog(LOG_NOTICE, "Debug: Get Connected.\n");
                 }
             }
         } else {
@@ -345,6 +374,7 @@ void if_mbed_phy_task(intptr_t arg) {
             	ether_set_link_down(ether);
                 link_mode_new = NEGO_FAIL;
                 connect_sts   = 0;
+                syslog(LOG_NOTICE, "Debug: Disconnected.\n");
             }
         }
         link_mode_old = link_mode_new;
@@ -352,10 +382,10 @@ void if_mbed_phy_task(intptr_t arg) {
     }
 }
 
+#if 1	// TECS
 /*
  * mbed_read -- フレームの読み込み
  */
-
 T_NET_BUF *
 if_mbed_read (T_IF_SOFTC *ic)
 {
@@ -385,6 +415,7 @@ if_mbed_read (T_IF_SOFTC *ic)
 
 	return input;
 }
+#endif
 
 /*
  * mbed_start -- 送信フレームをバッファリングする。

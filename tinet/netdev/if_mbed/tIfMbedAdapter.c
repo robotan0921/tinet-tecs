@@ -69,7 +69,7 @@
 #include <stdlib.h>
 #endif
 
-//#include "if_mbed.c"
+#include "tecs_if_mbed.h"
 extern T_IF_SOFTC;
 
 /* #[<POSTAMBLE>]#
@@ -82,5 +82,17 @@ extern T_IF_SOFTC;
 void
 if_mbed_init (T_IF_SOFTC *ic)
 {
-	cNicDriver_init();
+	TECS_T_IF_SOFTC *tecsic = ic;
+	cNicDriver_init(tecsic);
+}
+
+
+/*
+ * mbed_reset -- ネットワークインタフェースをリセットする。
+ */
+void
+if_mbed_reset (T_IF_SOFTC *ic)
+{
+	TECS_T_IF_SOFTC *tecsic = ic;
+    cNicDriver_reset(tecsic);
 }
