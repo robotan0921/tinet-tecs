@@ -10,7 +10,8 @@ cell tKernel Kernel{
 			eNicDriver.read.inputp=NetworkBuffer.eNetworkAlloc)]
 cell tIfMbed IfMbed {
 	cSemaphoreSend 		= SemaphoreNicSend.eSemaphore;
-	ciSemaphoreReceive 	= SemaphoreNicReceive.eiSemaphore;
+	//ciSemaphoreReceive 	= SemaphoreNicReceive.eiSemaphore;
+	cSemaphoreReceive 	= SemaphoreNicReceive.eSemaphore;
 	cInterruptRequest 	= NicInterrupt.eInterruptRequest;
     
     //cNetworkTimer = NetworkTimer.eNetworkTimer[0];

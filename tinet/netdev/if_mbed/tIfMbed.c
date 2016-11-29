@@ -56,8 +56,13 @@
  *   ER             cSemaphoreSend_waitTimeout( TMO timeout );
  *   ER             cSemaphoreSend_initialize( );
  *   ER             cSemaphoreSend_refer( T_RSEM* pk_semaphoreStatus );
- * call port: ciSemaphoreReceive signature: siSemaphore context:non-task
- *   ER             ciSemaphoreReceive_signal( );
+ * call port: cSemaphoreReceive signature: sSemaphore context:task
+ *   ER             cSemaphoreReceive_signal( );
+ *   ER             cSemaphoreReceive_wait( );
+ *   ER             cSemaphoreReceive_waitPolling( );
+ *   ER             cSemaphoreReceive_waitTimeout( TMO timeout );
+ *   ER             cSemaphoreReceive_initialize( );
+ *   ER             cSemaphoreReceive_refer( T_RSEM* pk_semaphoreStatus );
  * call port: cInterruptRequest signature: sInterruptRequest context:task
  *   ER             cInterruptRequest_disable( );
  *   ER             cInterruptRequest_enable( );
@@ -124,7 +129,7 @@ extern struct t_mbed_softc mbed_softc;
  */
 
 static void if_mbed_stop ( TECS_T_MBED_SOFTC *sc);
-static void if_mbed_init_sub ( CELLCB *p_cellcb , TECS_T_IF_SOFTC *tecsic);
+static void if_mbed_init_sub ( CELLCB *p_cellcb );
 
 #ifdef SUPPORT_INET6
 
@@ -216,7 +221,7 @@ if_mbed_addmulti (T_IF_SOFTC *ic) {
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eNicDriver_init(CELLIDX idx, TECS_T_IF_SOFTC *tecsic)
+eNicDriver_init(CELLIDX idx)
 {
 	CELLCB	*p_cellcb;
 	if (VALID_IDX(idx)) {
@@ -227,19 +232,14 @@ eNicDriver_init(CELLIDX idx, TECS_T_IF_SOFTC *tecsic)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	syslog(LOG_NOTICE, "Debug: eNicDriver_init\n");
 	/**
 	*	Debug用
 	*/
 	VAR_timer = 0;
-		VAR_sc = &mbed_softc;
-	syslog(LOG_NOTICE, "Debug: p_cellcb = %x\n", p_cellcb);
-	syslog(LOG_NOTICE, "Debug: if_softc = %x\n", &if_softc);
-	syslog(LOG_NOTICE, "Debug: sc = %x\n", p_cellcb->sc);
-	syslog(LOG_NOTICE, "Debug: mbed_softc = %x\n", &mbed_softc);
+	VAR_sc = &mbed_softc;
 
 	/* mbed_init 本体を呼び出す。*/
-	if_mbed_init_sub( p_cellcb , tecsic);
+	if_mbed_init_sub( p_cellcb );
 
 	act_tsk( IF_MBED_PHY_TASK );
 
@@ -274,7 +274,7 @@ eNicDriver_start(CELLIDX idx, int8_t* outputp, int32_t size, uint8_t align)
  * global_name:  tIfMbed_eNicDriver_read
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
-void
+T_NET_BUF*
 eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 {
 	CELLCB	*p_cellcb;
@@ -286,15 +286,49 @@ eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+/**
+*	TODO: TINET+TECS
+*	とりあえず既存の実装にのっとり,移植する
+*	今後，修正を行う
+**/
+//	T_MBED_SOFTC *sc = ic->sc;
+//	TECS_T_MBED_SOFTC *sc = p_cellcb->sc;
+//	T_NET_BUF *input = NULL;
+	struct t_net_buf *input = NULL;		// TODO
+	inputp = &input;
+	//uint_t align;
+	int len;
+	uint8_t *dst;
+	ER error;
+
+	len = ethernet_receive();
+	if (len <= 0)
+		return NULL;
+
+	align = 0;
+
+	if ((error = tget_net_buf(&input, align, TMO_IF_MBED_GET_NET_BUF)) == E_OK && input != NULL) {
+		dst = input->buf + IF_ETHER_NIC_HDR_ALIGN;
+		input->len = ethernet_read((char *)dst, len);
+	}
+	else {
+		NET_COUNT_ETHER_NIC(net_count_ether_nic[NC_ETHER_NIC_IN_ERR_PACKETS], 1);
+		NET_COUNT_ETHER_NIC(net_count_ether_nic[NC_ETHER_NIC_NO_BUFS], 1);
+	}
+
+	//sig_sem(ic->semid_rxb_ready);
+	sig_sem(6);
+	//cSemaphoreReceive_signal();
+	return input;
 }
 
-/* #[<ENTRY_FUNC>]# eNicDriver_getMac
- * name:         eNicDriver_getMac
- * global_name:  tIfMbed_eNicDriver_getMac
+/* #[<ENTRY_FUNC>]# eNicDriver_probe
+ * name:         eNicDriver_probe
+ * global_name:  tIfMbed_eNicDriver_probe
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eNicDriver_getMac(CELLIDX idx, uint8_t* macaddress)
+eNicDriver_probe(CELLIDX idx, uint8_t* macaddress)
 {
 	CELLCB	*p_cellcb;
 	if (VALID_IDX(idx)) {
@@ -305,17 +339,28 @@ eNicDriver_getMac(CELLIDX idx, uint8_t* macaddress)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	syslog(LOG_NOTICE, "Debug: eNicDriver_getMac\n");
 	//mikanちゃんとハードウェアからとってくるべき
 // TODO	
-/*
-	macaddress[0] = VAR_macaddr0;
-	macaddress[1] = VAR_macaddr1;
-	macaddress[2] = VAR_macaddr2;
-	macaddress[3] = VAR_macaddr3;
-	macaddress[4] = VAR_macaddr4;
-	macaddress[5] = VAR_macaddr5;
-*/
+#if 0
+#if (MBED_MAC_ADDRESS_SUM != MBED_MAC_ADDR_INTERFACE)
+    netif->hwaddr[0] = MBED_MAC_ADDR_0;
+    netif->hwaddr[1] = MBED_MAC_ADDR_1;
+    netif->hwaddr[2] = MBED_MAC_ADDR_2;
+    netif->hwaddr[3] = MBED_MAC_ADDR_3;
+    netif->hwaddr[4] = MBED_MAC_ADDR_4;
+    netif->hwaddr[5] = MBED_MAC_ADDR_5;
+#else
+    mbed_mac_address((char *)macaddress);
+#endif
+#endif
+
+	macaddress[0] = 0x00;	//VAR_macaddr0;
+	macaddress[1] = 0x02;	//VAR_macaddr1;
+	macaddress[2] = 0xF7;	//VAR_macaddr2;
+	macaddress[3] = 0xF0;	//VAR_macaddr3;
+	macaddress[4] = 0x00;	//VAR_macaddr4;
+	macaddress[5] = 0x00;	//VAR_macaddr5;
+
 }
 
 /* #[<ENTRY_FUNC>]# eNicDriver_reset
@@ -324,7 +369,7 @@ eNicDriver_getMac(CELLIDX idx, uint8_t* macaddress)
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eNicDriver_reset(CELLIDX idx, TECS_T_IF_SOFTC *tecsic)
+eNicDriver_reset(CELLIDX idx)
 {
 	CELLCB	*p_cellcb;
 	if (VALID_IDX(idx)) {
@@ -339,7 +384,7 @@ eNicDriver_reset(CELLIDX idx, TECS_T_IF_SOFTC *tecsic)
 
 	NET_COUNT_ETHER_NIC(net_count_ether_nic[NC_ETHER_NIC_RESETS], 1);
 	if_mbed_stop( p_cellcb->sc );
-	if_mbed_init_sub( p_cellcb , tecsic);
+	if_mbed_init_sub( p_cellcb );
 
     ethernetext_start_stop(1);
 }
@@ -376,17 +421,15 @@ eiBody_main(CELLIDX idx)
 
 static void rza1_recv_callback(void) {
 	CELLCB	*p_cellcb;
-    sig_sem(if_softc.semid_rxb_ready);
-    //ciSemaphoreReceive_signal();
+    sig_sem(if_softc.semid_rxb_ready);	// TODO
+    //cSemaphoreReceive_signal();
 }
 
 static void
-if_mbed_init_sub ( CELLCB *p_cellcb , TECS_T_IF_SOFTC *tecsic) {
+if_mbed_init_sub ( CELLCB *p_cellcb ) {
     ethernet_cfg_t ethcfg;
-	uint8_t *macaddress;
-    eNicDriver_getMac(p_cellcb, macaddress);
-    macaddress = 0x2002023c;	// TODO
-    syslog(LOG_NOTICE, "Debug: macaddress = 0x%x\n", macaddress);
+	uint8_t macaddress[6];
+    eNicDriver_probe(p_cellcb, macaddress);
 
     /* Initialize the hardware */
     ethcfg.int_priority = 6;

@@ -1,8 +1,6 @@
 #ifndef _BUFFER_DEFINE_H_
 #define _BUFFER_DEFINE_H_
 
-#include "tinet/net/net_buf.h"
-/*
 typedef struct {
 	uint8_t tphdrlen; //トランスポート層のヘッダ長
 	uint8_t iphdrlen; //IP層のヘッダ長
@@ -28,8 +26,7 @@ typedef struct {
 
 	uint8_t buf[4];
 }T_NET_BUF;
-*/
 
-//#endif	/* of #ifndef T_NET_BUF_DEFINED */
+#endif	/* of #ifndef T_NET_BUF_DEFINED */
 
 #endif /* _BUFFER_DEFINE_H_ */

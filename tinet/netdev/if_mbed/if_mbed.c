@@ -298,6 +298,7 @@ if_mbed_watchdog (T_IF_SOFTC *ic)
 	if_mbed_reset(ic);
 }
 
+#if 1 	// TECS
 /*
  * mbed_probe -- ネットワークインタフェースの検出
  */
@@ -314,10 +315,9 @@ if_mbed_probe (T_IF_SOFTC *ic)
     netif->hwaddr[5] = MBED_MAC_ADDR_5;
 #else
     mbed_mac_address((char *)ic->ifaddr.lladdr);
-    syslog(LOG_EMERG, "Debug: ic->ifaddr.lladdr = 0x%x\n", ic->ifaddr.lladdr);
 #endif
 }
-
+#endif
 #if 0 // for TECS
 
 #define ETHER_EESR0_TC 0x00200000
@@ -343,8 +343,6 @@ if_mbed_init (T_IF_SOFTC *ic)
 #endif
 
 void if_mbed_phy_task(intptr_t arg) {
-	syslog(LOG_NOTICE, "Debug: if_mbed_phy_task is activated.\n");
-
 	T_IFNET *ether = ether_get_ifnet();
     int32_t connect_sts = 0;   /* 0: disconnect, 1:connect */
     int32_t link_sts;
@@ -353,20 +351,16 @@ void if_mbed_phy_task(intptr_t arg) {
 
     while (1) {
         link_sts = ethernet_link();
-        //syslog(LOG_EMERG, "Debug: link_sts = %d\n", link_sts);
         if (link_sts == 1) {
             link_mode_new = ethernetext_chk_link_mode();
-            //syslog(LOG_EMERG, "Debug: link_mode_new = %d\n", link_mode_new);
             if (link_mode_new != link_mode_old) {
                 if (connect_sts == 1) {
-                	syslog(LOG_NOTICE, "Debug: Connected.\n");
                		ether_set_link_down(ether);	
                 }
                 if (link_mode_new != NEGO_FAIL) {
                     ethernetext_set_link_mode(link_mode_new);
                     ether_set_link_up(ether);
                     connect_sts = 1;
-                    syslog(LOG_NOTICE, "Debug: Get Connected.\n");
                 }
             }
         } else {
@@ -374,7 +368,6 @@ void if_mbed_phy_task(intptr_t arg) {
             	ether_set_link_down(ether);
                 link_mode_new = NEGO_FAIL;
                 connect_sts   = 0;
-                syslog(LOG_NOTICE, "Debug: Disconnected.\n");
             }
         }
         link_mode_old = link_mode_new;
@@ -382,14 +375,13 @@ void if_mbed_phy_task(intptr_t arg) {
     }
 }
 
-#if 1	// TECS
+#if 0 // TECS
 /*
  * mbed_read -- フレームの読み込み
  */
 T_NET_BUF *
 if_mbed_read (T_IF_SOFTC *ic)
 {
-	T_MBED_SOFTC *sc = ic->sc;
 	T_NET_BUF *input = NULL;
 	uint_t align;
 	int len;

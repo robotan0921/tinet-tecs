@@ -39,6 +39,7 @@ celltype tNewFixedSizeMemoryPool {
 
 //ネットワークバッファ用の定義をインクルード
 import_C ("Buffer_define.h");
+//import_C ("tinet/net/net_buf.h");
   
 //ネットワークバッファの数
 const uint8_t NUM_NETWORK_BUFFER = 6;

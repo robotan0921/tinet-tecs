@@ -1,4 +1,6 @@
 import_C("tinet/netdev/if_mbed/tecs_if_mbed.h");
+import_C("tinet/Buffer_define.h");
+
 
 signature sNicDriver {
 /**
@@ -8,18 +10,19 @@ signature sNicDriver {
 *   void getMac([out,size_is(6)]uint8_t *macaddress);
 *   void reset(void);
 **/
-    void init([inout]TECS_T_IF_SOFTC *tecsic);
+    void init(void);
     void start([send(sNetworkAlloc),size_is(size)] int8_t *outputp,[in]int32_t size,[in]uint8_t align);
-    void read([receive(sNetworkAlloc),size_is(*size)]int8_t **inputp,[out]int32_t *size,[in]uint8_t align);
-    void getMac([out,size_is(6)]uint8_t *macaddress);
-    void reset([inout]TECS_T_IF_SOFTC *tecsic);
+    T_NET_BUF* read([receive(sNetworkAlloc),size_is(*size)]int8_t **inputp,[out]int32_t *size,[in]uint8_t align);
+    void probe([out,size_is(6)]uint8_t *macaddress);
+    void reset(void);
 };
 
 celltype tIfMbed {
 	require tKernel.eKernel;
 
 	call sSemaphore cSemaphoreSend;
-	call siSemaphore ciSemaphoreReceive;
+	//call siSemaphore ciSemaphoreReceive;
+    call sSemaphore cSemaphoreReceive;
 	call sInterruptRequest cInterruptRequest;
 	//call sNetworkTimer cNetworkTimer;
 

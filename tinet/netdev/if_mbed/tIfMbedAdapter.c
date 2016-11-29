@@ -82,8 +82,7 @@ extern T_IF_SOFTC;
 void
 if_mbed_init (T_IF_SOFTC *ic)
 {
-	TECS_T_IF_SOFTC *tecsic = ic;
-	cNicDriver_init(tecsic);
+	cNicDriver_init();
 }
 
 
@@ -93,6 +92,18 @@ if_mbed_init (T_IF_SOFTC *ic)
 void
 if_mbed_reset (T_IF_SOFTC *ic)
 {
-	TECS_T_IF_SOFTC *tecsic = ic;
-    cNicDriver_reset(tecsic);
+    cNicDriver_reset();
+}
+
+/*
+ * mbed_read -- フレームの読み込み
+ */
+T_NET_BUF *
+if_mbed_read (T_IF_SOFTC *ic)
+{
+	int8_t** inputp;
+	int32_t* size;
+	uint8_t align;
+	
+	return cNicDriver_read(inputp, size, align);
 }
