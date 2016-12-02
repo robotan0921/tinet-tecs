@@ -25,6 +25,7 @@ celltype tIfMbed {
     call sSemaphore cSemaphoreReceive;
 	call sInterruptRequest cInterruptRequest;
 	//call sNetworkTimer cNetworkTimer;
+    call sTask cTask;
 
 	//entry sCallTimerFunction eWatchdogTimer;
 	entry sNicDriver eNicDriver;
@@ -37,12 +38,18 @@ celltype tIfMbed {
 		uint8_t macaddr3;
 		uint8_t macaddr4;
 		uint8_t macaddr5;
-	
+
 		uint16_t timer;
 		//T_IF_ETHER_NIC_SOFTC *sc;
         TECS_T_MBED_SOFTC *sc;
 	};
 };
+
+celltype tIfMbedPhyTaskBody {
+    require tKernel.eKernel;
+    entry sTaskBody eTaskBody;
+};
+
 /*
 [active]
 composite tIfMbedComposite {

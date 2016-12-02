@@ -102,11 +102,11 @@ extern uint8_t mac_addr[ETHER_ADDR_LEN];
 #endif
 
 // for TECS
-#define ETHER_EESR0_TC 0x00200000
+//#define ETHER_EESR0_TC 0x00200000
 
-#if 1 // for TECS
+#if 0 // for TECS
 /*
- *  ネットワークインタフェースに依存するソフトウェア情報 
+ *  ネットワークインタフェースに依存するソフトウェア情報
  */
 
 typedef struct t_mbed_softc {
@@ -122,7 +122,7 @@ typedef struct t_mbed_softc {
 /* ネットワークインタフェースに依存するソフトウェア情報 */
 
 //static T_MBED_SOFTC mbed_softc;
-T_MBED_SOFTC mbed_softc;	// Debug
+//T_MBED_SOFTC mbed_softc;	// Debug
 
 
 /* ネットワークインタフェースに依存しないソフトウェア情報 */
@@ -231,7 +231,7 @@ if_mbed_addmulti (T_IF_SOFTC *ic)
 #if 0	// For TECS
 /*
  *  mbed_stop -- ネットワークインタフェースを停止する。
- * 
+ *
  *    注意: NIC 割り込み禁止状態で呼び出すこと。
  */
 
@@ -277,7 +277,7 @@ if_mbed_reset (T_IF_SOFTC *ic)
     ethernetext_start_stop(1);
 }
 #endif
-
+#if 0
 /*
  *  get_mbed_softc -- ネットワークインタフェースのソフトウェア情報を返す。
  */
@@ -287,7 +287,8 @@ if_mbed_get_softc (void)
 {
 	return &if_softc;
 }
-
+#endif
+#if 0
 /*
  * mbed_watchdog -- ネットワークインタフェースのワッチドッグタイムアウト
  */
@@ -297,8 +298,8 @@ if_mbed_watchdog (T_IF_SOFTC *ic)
 {
 	if_mbed_reset(ic);
 }
-
-#if 1 	// TECS
+#endif
+#if 0 	// TECS
 /*
  * mbed_probe -- ネットワークインタフェースの検出
  */
@@ -341,7 +342,7 @@ if_mbed_init (T_IF_SOFTC *ic)
 	ETHER.EESIPR0 |= ETHER_EESR0_TC;
 }
 #endif
-
+#if 0
 void if_mbed_phy_task(intptr_t arg) {
 	T_IFNET *ether = ether_get_ifnet();
     int32_t connect_sts = 0;   /* 0: disconnect, 1:connect */
@@ -355,7 +356,7 @@ void if_mbed_phy_task(intptr_t arg) {
             link_mode_new = ethernetext_chk_link_mode();
             if (link_mode_new != link_mode_old) {
                 if (connect_sts == 1) {
-               		ether_set_link_down(ether);	
+               		ether_set_link_down(ether);
                 }
                 if (link_mode_new != NEGO_FAIL) {
                     ethernetext_set_link_mode(link_mode_new);
@@ -374,7 +375,7 @@ void if_mbed_phy_task(intptr_t arg) {
         dly_tsk(PHY_TASK_WAIT);
     }
 }
-
+#endif
 #if 0 // TECS
 /*
  * mbed_read -- フレームの読み込み
@@ -408,7 +409,7 @@ if_mbed_read (T_IF_SOFTC *ic)
 	return input;
 }
 #endif
-
+#if 0	// TECS
 /*
  * mbed_start -- 送信フレームをバッファリングする。
  */
@@ -425,7 +426,8 @@ if_mbed_start (T_IF_SOFTC *ic, T_NET_BUF *output)
 
     ethernet_send();
 }
-
+#endif
+#if 0
 /*
  *  MBED Ethernet Controler 送受信割り込みハンドラ
  */
@@ -440,3 +442,4 @@ if_mbed_eth_handler (void)
 
 	INT_Ether();
 }
+#endif

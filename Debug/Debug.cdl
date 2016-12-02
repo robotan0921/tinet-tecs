@@ -3,7 +3,6 @@ import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
 
 cell tKernel Kernel{
-
 };
 
 [allocator(eNicDriver.start.outputp=NetworkBuffer.eNetworkAlloc, 
@@ -16,6 +15,17 @@ cell tIfMbed IfMbed {
     
     //cNetworkTimer = NetworkTimer.eNetworkTimer[0];
 
+    cTask = IfMbedPhyTask.eTask;
+};
+
+cell tTask IfMbedPhyTask {
+    cTaskBody = IfMbedPhyTaskBody.eTaskBody;
+
+    priority   = C_EXP("IF_MBED_PHY_PRIORITY");
+    stackSize = C_EXP("IF_MBED_PHY_STACK_SIZE");
+};
+
+cell tIfMbedPhyTaskBody IfMbedPhyTaskBody {
 };
 
 cell tIfMbedAdapter IfMbedAdapter {

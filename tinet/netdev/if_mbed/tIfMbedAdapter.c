@@ -104,6 +104,28 @@ if_mbed_read (T_IF_SOFTC *ic)
 	int8_t** inputp;
 	int32_t* size;
 	uint8_t align;
-	
+
 	return cNicDriver_read(inputp, size, align);
+}
+
+/*
+ * mbed_start -- 送信フレームをバッファリングする。
+ */
+void
+if_mbed_start (T_IF_SOFTC *ic, T_NET_BUF *output)
+{
+	//int8_t* outputp;
+	int32_t size;
+	uint8_t align;
+
+	cNicDriver_start((int8_t *)output, size, align);
+}
+
+/*
+ * mbed_probe -- ネットワークインタフェースの検出
+ */
+void
+if_mbed_probe (T_IF_SOFTC *ic)
+{
+	cNicDriver_probe(ic->ifaddr.lladdr);
 }

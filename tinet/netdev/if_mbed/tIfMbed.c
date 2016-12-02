@@ -66,6 +66,20 @@
  * call port: cInterruptRequest signature: sInterruptRequest context:task
  *   ER             cInterruptRequest_disable( );
  *   ER             cInterruptRequest_enable( );
+ * call port: cTask signature: sTask context:task
+ *   ER             cTask_activate( );
+ *   ER_UINT        cTask_cancelActivate( );
+ *   ER             cTask_getTaskState( STAT* p_tskstat );
+ *   ER             cTask_changePriority( PRI priority );
+ *   ER             cTask_getPriority( PRI* p_priority );
+ *   ER             cTask_refer( T_RTSK* pk_taskStatus );
+ *   ER             cTask_wakeup( );
+ *   ER_UINT        cTask_cancelWakeup( );
+ *   ER             cTask_releaseWait( );
+ *   ER             cTask_suspend( );
+ *   ER             cTask_resume( );
+ *   ER             cTask_raiseTerminate( );
+ *   ER             cTask_terminate( );
  * allocator port for call port:eNicDriver func:start param: outputp
  *   ER             eNicDriver_start_outputp_alloc( void** buf, const int32_t minlen, TMO tmout );
  *   ER             eNicDriver_start_outputp_dealloc( const void* buf );
@@ -121,8 +135,35 @@
 #endif
 
 extern uint8_t mac_addr[ETHER_ADDR_LEN];
-extern T_IF_SOFTC if_softc;
-extern struct t_mbed_softc mbed_softc;
+
+#define ETHER_EESR0_TC 0x00200000
+
+/*
+ *  ネットワークインタフェースに依存するソフトウェア情報
+ */
+typedef struct t_mbed_softc {
+	bool_t link_pre;
+	bool_t link_now;
+	bool_t over_flow;
+} T_MBED_SOFTC;
+
+/* ネットワークインタフェースに依存するソフトウェア情報 */
+static T_MBED_SOFTC mbed_softc;
+
+/* ネットワークインタフェースに依存しないソフトウェア情報 */
+T_IF_SOFTC if_softc = {
+	{0,},						/* ネットワークインタフェースのアドレス	*/
+	0,							/* 送信タイムアウト			*/
+	&mbed_softc,				/* ディバイス依存のソフトウェア情報	*/
+	SEM_IF_MBED_SBUF_READY,	/* 送信セマフォ			*/
+	SEM_IF_MBED_RBUF_READY,	/* 受信セマフォ			*/
+
+#ifdef SUPPORT_INET6
+
+	IF_MADDR_INIT,				/* マルチキャストアドレスリスト	*/
+
+#endif	/* of #ifdef SUPPORT_INET6 */
+};
 
 /*
  *  局所変数
@@ -210,7 +251,6 @@ if_mbed_addmulti (T_IF_SOFTC *ic) {
  * context:    task
  * #[</ENTRY_PORT>]# */
 
-#define ETHER_EESR0_TC 0x00200000
 
 /*
  * mbed_init -- ネットワークインタフェースの初期化
@@ -241,7 +281,8 @@ eNicDriver_init(CELLIDX idx)
 	/* mbed_init 本体を呼び出す。*/
 	if_mbed_init_sub( p_cellcb );
 
-	act_tsk( IF_MBED_PHY_TASK );
+	//act_tsk( IF_MBED_PHY_TASK );
+	cTask_activate();
 
 	ethernet_set_link(-1, 0);
 
@@ -266,6 +307,15 @@ eNicDriver_start(CELLIDX idx, int8_t* outputp, int32_t size, uint8_t align)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	//T_MBED_SOFTC *sc = ic->sc;
+	struct t_net_buf *output = (struct t_net_buf*)outputp;
+	int32_t len, res, pos;
+
+	for ( res = output->len, pos = 0; res > 0; res -= len, pos += len ) {
+		len = ethernet_write((char *)output->buf + IF_ETHER_NIC_HDR_ALIGN + pos, res);
+	}
+
+    ethernet_send();
 
 }
 
@@ -340,8 +390,7 @@ eNicDriver_probe(CELLIDX idx, uint8_t* macaddress)
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	//mikanちゃんとハードウェアからとってくるべき
-// TODO	
-#if 0
+// TODO
 #if (MBED_MAC_ADDRESS_SUM != MBED_MAC_ADDR_INTERFACE)
     netif->hwaddr[0] = MBED_MAC_ADDR_0;
     netif->hwaddr[1] = MBED_MAC_ADDR_1;
@@ -352,15 +401,14 @@ eNicDriver_probe(CELLIDX idx, uint8_t* macaddress)
 #else
     mbed_mac_address((char *)macaddress);
 #endif
-#endif
-
+/*
 	macaddress[0] = 0x00;	//VAR_macaddr0;
 	macaddress[1] = 0x02;	//VAR_macaddr1;
 	macaddress[2] = 0xF7;	//VAR_macaddr2;
 	macaddress[3] = 0xF0;	//VAR_macaddr3;
 	macaddress[4] = 0x00;	//VAR_macaddr4;
 	macaddress[5] = 0x00;	//VAR_macaddr5;
-
+*/
 }
 
 /* #[<ENTRY_FUNC>]# eNicDriver_reset
@@ -438,9 +486,44 @@ if_mbed_init_sub ( CELLCB *p_cellcb ) {
     ethcfg.ether_mac    = (char *)macaddress;
 
     ethernetext_init(&ethcfg);
-}	
+}
 
+/*
+ *  mbed_stop -- ネットワークインタフェースを停止する。
+ *
+ *    注意: NIC 割り込み禁止状態で呼び出すこと。
+ */
 static void
 if_mbed_stop ( TECS_T_MBED_SOFTC *sc) {
 	ethernetext_start_stop(0);
+}
+
+
+/*
+ *  get_mbed_softc -- ネットワークインタフェースのソフトウェア情報を返す。
+ */
+
+T_IF_SOFTC *
+if_mbed_get_softc (void) {
+	return &if_softc;
+}
+/*
+ * mbed_watchdog -- ネットワークインタフェースのワッチドッグタイムアウト
+ */
+void
+if_mbed_watchdog (T_IF_SOFTC *ic) {
+	if_mbed_reset(ic);
+}
+
+/*
+ *  MBED Ethernet Controler 送受信割り込みハンドラ
+ */
+void
+if_mbed_eth_handler (void) {
+	if ((ETHER.EESR0 & ETHER_EESR0_TC) != 0) {
+		/* 送信割り込み処理 */
+		isig_sem(if_softc.semid_txb_ready);
+	}
+
+	INT_Ether();
 }
