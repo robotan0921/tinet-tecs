@@ -36,5 +36,5 @@
 #
 INCLUDES	:= $(INCLUDES) -I$(TINET_ROOT)/netdev/$(NET_DEV)
 TINET_DIR	:= $(TINET_DIR):$(TINET_ROOT)/netdev/$(NET_DEV)
-TINET_COBJS	:= $(TINET_COBJS) if_mbed.o
+# TINET_COBJS	:= $(TINET_COBJS) if_mbed.o
 TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/netdev/$(NET_DEV)/if_mbed.cfg
