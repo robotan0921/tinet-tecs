@@ -17,7 +17,7 @@
  * macaddr4         uint8_t          VAR_macaddr4    
  * macaddr5         uint8_t          VAR_macaddr5    
  * timer            uint16_t         VAR_timer       
- * sc               TECS_T_MBED_SOFTC*  VAR_sc          
+ * sc               T_MBED_SOFTC*    VAR_sc          
  *
  * 呼び口関数 #_TCPF_#
  * require port: signature:sKernel context:task
@@ -138,14 +138,7 @@ extern uint8_t mac_addr[ETHER_ADDR_LEN];
 
 #define ETHER_EESR0_TC 0x00200000
 
-/*
- *  ネットワークインタフェースに依存するソフトウェア情報
- */
-typedef struct t_mbed_softc {
-	bool_t link_pre;
-	bool_t link_now;
-	bool_t over_flow;
-} T_MBED_SOFTC;
+
 
 /* ネットワークインタフェースに依存するソフトウェア情報 */
 static T_MBED_SOFTC mbed_softc;
@@ -169,7 +162,7 @@ T_IF_SOFTC if_softc = {
  *  局所変数
  */
 
-static void if_mbed_stop ( TECS_T_MBED_SOFTC *sc);
+static void if_mbed_stop ( T_MBED_SOFTC *sc);
 static void if_mbed_init_sub ( CELLCB *p_cellcb );
 
 #ifdef SUPPORT_INET6
@@ -341,8 +334,7 @@ eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 *	とりあえず既存の実装にのっとり,移植する
 *	今後，修正を行う
 **/
-//	T_MBED_SOFTC *sc = ic->sc;
-//	TECS_T_MBED_SOFTC *sc = p_cellcb->sc;
+//	T_MBED_SOFTC *sc = p_cellcb->sc;
 //	T_NET_BUF *input = NULL;
 	struct t_net_buf *input = NULL;		// TODO
 	inputp = &input;
@@ -494,7 +486,7 @@ if_mbed_init_sub ( CELLCB *p_cellcb ) {
  *    注意: NIC 割り込み禁止状態で呼び出すこと。
  */
 static void
-if_mbed_stop ( TECS_T_MBED_SOFTC *sc) {
+if_mbed_stop ( T_MBED_SOFTC *sc) {
 	ethernetext_start_stop(0);
 }
 

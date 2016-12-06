@@ -1,15 +1,7 @@
 import_C("tinet/netdev/if_mbed/tecs_if_mbed.h");
-import_C("tinet/Buffer_define.h");
-
+//import_C("tinet/Buffer_define.h");
 
 signature sNicDriver {
-/**
-*	void init(void);
-*   void start([send(sNetworkAlloc),size_is(size)] int8_t *outputp,[in]int32_t size,[in]uint8_t align);
-*   void read([receive(sNetworkAlloc),size_is(*size)]int8_t **inputp,[out]int32_t *size,[in]uint8_t align);
-*   void getMac([out,size_is(6)]uint8_t *macaddress);
-*   void reset(void);
-**/
     void init(void);
     void start([send(sNetworkAlloc),size_is(size)] int8_t *outputp,[in]int32_t size,[in]uint8_t align);
     T_NET_BUF* read([receive(sNetworkAlloc),size_is(*size)]int8_t **inputp,[out]int32_t *size,[in]uint8_t align);
@@ -40,8 +32,8 @@ celltype tIfMbed {
 		uint8_t macaddr5;
 
 		uint16_t timer;
-		//T_IF_ETHER_NIC_SOFTC *sc;
-        TECS_T_MBED_SOFTC *sc;
+
+        T_MBED_SOFTC *sc;
 	};
 };
 
