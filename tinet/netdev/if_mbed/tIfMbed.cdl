@@ -46,7 +46,7 @@ celltype tIfMbedPhyTaskBody {
 composite tIfMbedComposite {
 
     call sNetworkTimer cNetworkTimer;
-    
+
     entry sSemaphore eSemaphoreSend;
     entry sSemaphore eSemaphoreReceive;
     entry sNicDriver eNicDriver;
@@ -62,7 +62,7 @@ composite tIfMbedComposite {
         uint8_t mac4;
         uint8_t mac5;
     };
-    
+
     cell tMbed Mbed;
 
     //ドライバ送受信用セマフォ
@@ -76,9 +76,9 @@ composite tIfMbedComposite {
         initialCount = 0;
         maxCount = 1;
     };
-    
+
     cell tISRWithInterruptRequest NicInterrupt{
-        
+
         interruptNumber = composite.interruptNumber;
         interruptAttribute = C_EXP("TA_ENAINT");
         interruptPriority = composite.interruptPriority;
@@ -96,10 +96,10 @@ composite tIfMbedComposite {
         macaddr3 = composite.mac3;
         macaddr4 = composite.mac4;
         macaddr5 = composite.mac5;
-        
+
         cSemaphoreSend = SemaphoreNicSend.eSemaphore;
         ciSemaphoreReceive = SemaphoreNicReceive.eiSemaphore;
-        
+
         cInterruptRequest = NicInterrupt.eInterruptRequest;
 
         cNetworkTimer => composite.cNetworkTimer;
