@@ -80,6 +80,53 @@
 #define	E_ID	(-18)	/* illegal ID */
 #endif
 
+#include <string.h>
+
+#ifdef TARGET_KERNEL_ASP
+
+#include <kernel.h>
+#include <sil.h>
+#include <t_syslog.h>
+#include "kernel_cfg.h"
+
+#endif	/* of #ifdef TARGET_KERNEL_ASP */
+
+#ifdef TARGET_KERNEL_JSP
+
+#include <s_services.h>
+#include <t_services.h>
+#include "kernel_id.h"
+
+#endif	/* of #ifdef TARGET_KERNEL_JSP */
+
+#include <tinet_defs.h>
+#include <tinet_config.h>
+
+#include <net/if.h>
+#include <net/ethernet.h>
+#include <net/if_llc.h>
+#include <net/if_arp.h>
+#include <net/net.h>
+#include <net/net_var.h>
+#include <net/net_buf.h>
+#include <net/net_timer.h>
+#include <net/net_count.h>
+
+#include <netinet/in.h>
+#include <netinet/in_var.h>
+#include <netinet/if_ether.h>
+
+#include <netinet6/if6_ether.h>
+#include <netinet6/nd6.h>
+
+#include <net/if_var.h>
+
+extern T_IFNET ether_ifnet;
+
+#ifdef SUPPORT_MIB
+extern T_IF_STATS if_stats;
+#endif
+
 /* 受け口関数 #_TEPF_# */
 /* #[<ENTRY_PORT>]# eTaskBody
  * entry port: eTaskBody
@@ -104,7 +151,156 @@ eTaskBody_main(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	T_IF_SOFTC	*ic;
+	T_NET_BUF	*input;
+	T_ETHER_HDR	*eth;
+	ID		tskid;
+	uint16_t	proto;
+	uint8_t		rcount = 0;
 
+	/* ネットワークインタフェース管理を初期化する。*/
+	ifinit();
+
+	/* イーサネットネットワークインタフェース管理を初期化する。*/
+
+#if defined(_IP4_CFG)
+
+	ether_ifnet.in4_ifaddr.addr = IPV4_ADDR_LOCAL;		/* IPv4 アドレス		*/
+	ether_ifnet.in4_ifaddr.mask = IPV4_ADDR_LOCAL_MASK;	/* サブネットマスク		*/
+
+#endif	/* of #if defined(_IP4_CFG) */
+
+	/* NIC を初期化する。*/
+	ic = IF_ETHER_NIC_GET_SOFTC();
+	IF_ETHER_NIC_PROBE(ic);
+	IF_ETHER_NIC_INIT(ic);
+
+	/* Ethernet 出力タスクを起動する */
+	syscall(act_tsk(ETHER_OUTPUT_TASK));
+
+	/* ネットワークタイマタスクを起動する */
+	syscall(act_tsk(NET_TIMER_TASK));
+
+	get_tid(&tskid);
+
+	syslog(LOG_NOTICE, "[ETHER INPUT:%2d] started on MAC Addr: %s.",
+	                   tskid, mac2str(NULL, ic->ifaddr.lladdr));
+
+#if defined(_IP4_CFG)
+
+	/* ARP を初期化する。*/
+	arp_init();
+	// TODO: cArp_init
+
+#endif	/* of #if defined(_IP4_CFG) */
+
+	ether_ifnet.ic = ic;
+
+	/* 乱数生成を初期化する。*/
+	net_srand(0);
+
+	while (true) {
+		syscall(wai_sem(ic->semid_rxb_ready));
+		if ((input = IF_ETHER_NIC_READ(ic)) != NULL) {
+			NET_COUNT_ETHER(net_count_ether.in_octets,  input->len);
+			NET_COUNT_MIB(if_stats.ifInOctets, input->len + 8);
+			NET_COUNT_ETHER(net_count_ether.in_packets, 1);
+			eth = GET_ETHER_HDR(input);
+			proto = ntohs(eth->type);
+
+			/* 乱数生成を初期化する。*/
+			if (rcount == 0) {
+
+#ifdef ETHER_CFG_COLLECT_ADDR
+				memcpy(ether_collect_addr.lladdr, eth->shost,
+				sizeof(ether_collect_addr.lladdr));
+#endif	/* of #ifdef ETHER_CFG_COLLECT_ADDR */
+
+				net_srand(0);
+				}
+			rcount ++;
+
+
+#ifdef SUPPORT_MIB
+			if ((*eth->dhost & ETHER_MCAST_ADDR) == 0) {
+				NET_COUNT_MIB(if_stats.ifInUcastPkts, 1);
+				}
+			else {
+				NET_COUNT_MIB(if_stats.ifInNUcastPkts, 1);
+				}
+#endif	/* of #ifdef SUPPORT_MIB */
+
+#if defined(_IP4_CFG) && defined(ETHER_CFG_ACCEPT_ALL)
+
+			if ((*eth->dhost & ETHER_MCAST_ADDR) && *eth->dhost != 0xff) {
+
+#ifdef ETHER_CFG_MCAST_WARNING
+
+				if (proto <= 1500)
+					proto = ntohs(*(uint16_t*)&(GET_8022SNAP_HDR(input)->type));
+				syslog(LOG_WARNING, "[ETHER] mcast addr  from: %s, to: %s, proto: 0x%04x.",
+				                    mac2str(NULL, eth->shost), mac2str(NULL, eth->dhost), proto);
+
+#endif	/* of #ifdef ETHER_CFG_MCAST_WARNING */
+
+				NET_COUNT_ETHER(net_count_ether.in_err_packets, 1);
+				NET_COUNT_MIB(if_stats.ifInErrors, 1);
+				syscall(rel_net_buf(input));
+				continue;
+				}
+
+#endif	/* of #if defined(_IP4_CFG) && defined(ETHER_CFG_ACCEPT_ALL) */
+
+			switch(proto) {
+
+#if defined(_IP4_CFG)
+
+			case ETHER_TYPE_IP:		/* IP	*/
+				ip_input(input);
+				break;
+
+			case ETHER_TYPE_ARP:		/* ARP	*/
+				arp_input(&ic->ifaddr, input);
+				break;
+
+#endif	/* of #if defined(_IP4_CFG) */
+
+#if defined(_IP6_CFG)
+
+			case ETHER_TYPE_IPV6:		/* IPv6	*/
+				ip6_input(input);
+				break;
+
+#endif	/* of #if defined(_IP6_CFG) */
+
+			default:
+
+#ifdef ETHER_CFG_UNEXP_WARNING
+
+#ifdef ETHER_CFG_802_WARNING
+
+				if (proto <= 1500)
+					ieee_802_input(input);
+				else
+					syslog(LOG_NOTICE, "[ETHER] unexp proto from: %s, proto: 0x%04x.",
+					                   mac2str(NULL, GET_ETHER_HDR(input)->shost), proto);
+
+#else	/* of #ifdef ETHER_CFG_802_WARNING */
+
+				syslog(LOG_INFO, "[ETHER] unexp proto from: %s, proto: 0x%04x.",
+				                   mac2str(NULL, GET_ETHER_HDR(input)->shost), proto);
+
+#endif	/* of #ifdef ETHER_CFG_802_WARNING */
+
+#endif	/* of #ifdef ETHER_CFG_UNEXP_WARNING */
+
+				NET_COUNT_ETHER(net_count_ether.in_err_packets, 1);
+				NET_COUNT_MIB(if_stats.ifUnknownProtos, 1);
+				syscall(rel_net_buf(input));
+				break;
+			}
+		}
+	}
 }
 
 /* #[<POSTAMBLE>]#

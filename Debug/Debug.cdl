@@ -1,18 +1,53 @@
 import("tBuffer.cdl");
 import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
+import("net/tEthernet.cdl");
 
 cell tKernel Kernel{
 };
 
-[allocator(eNicDriver.start.outputp=NetworkBuffer.eNetworkAlloc, 
+/**
+*   イーサネット層
+*
+**/
+
+cell tTask EthernetInputTask {
+
+    cTaskBody = EthernetInputTaskBody.eTaskBody;
+
+    attribute = C_EXP("TA_HLNG|TA_ACT");
+    priority  = C_EXP("ETHER_INPUT_PRIORITY");
+    stackSize = C_EXP("ETHER_INPUT_STACK_SIZE");
+};
+
+cell tEthernetInputTaskBody EthernetInputTaskBody {
+
+    //cTaskNetworkTimer = NetTimerTask.eTask;
+    //cTaskEthernetOutput = EthernetOutputTask.eTask;
+
+    cSemaphoreReceive = SemaphoreNicReceive.eSemaphore;
+    cNicDriver = IfMbed.eNicDriver;
+
+    //cArpInput = Arp.eArpInput;
+    //cIPv4Input = IPv4Input.eIPv4Input;
+
+};
+
+
+/**
+*   物理層
+*   tNetworkInterfaceContllor (tIfMbed)
+**/
+
+[allocator(eNicDriver.start.outputp=NetworkBuffer.eNetworkAlloc,
 			eNicDriver.read.inputp=NetworkBuffer.eNetworkAlloc)]
 cell tIfMbed IfMbed {
+
 	cSemaphoreSend 		= SemaphoreNicSend.eSemaphore;
 	//ciSemaphoreReceive 	= SemaphoreNicReceive.eiSemaphore;
 	cSemaphoreReceive 	= SemaphoreNicReceive.eSemaphore;
 	cInterruptRequest 	= NicInterrupt.eInterruptRequest;
-    
+
     //cNetworkTimer = NetworkTimer.eNetworkTimer[0];
 
     cTask = IfMbedPhyTask.eTask;
@@ -21,7 +56,8 @@ cell tIfMbed IfMbed {
 cell tTask IfMbedPhyTask {
     cTaskBody = IfMbedPhyTaskBody.eTaskBody;
 
-    priority   = C_EXP("IF_MBED_PHY_PRIORITY");
+    attribute = C_EXP("TA_NULL");
+    priority  = C_EXP("IF_MBED_PHY_PRIORITY");
     stackSize = C_EXP("IF_MBED_PHY_STACK_SIZE");
 };
 

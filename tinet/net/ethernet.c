@@ -97,7 +97,8 @@ const uint8_t ether_broad_cast_addr[ETHER_ADDR_LEN] = {
 
 /* ネットワークインタフェース構造体 */
 
-static T_IFNET ether_ifnet;
+//static T_IFNET ether_ifnet;
+T_IFNET ether_ifnet;
 
 #ifdef SUPPORT_MIB
 
@@ -404,6 +405,9 @@ ether_output_task(intptr_t exinf)
 void
 ether_input_task(intptr_t exinf)
 {
+	/* #define TSKID_tTask_EthernetInputTask	1 */
+	act_tsk(1);
+#if 0
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*input;
 	T_ETHER_HDR	*eth;
@@ -443,6 +447,7 @@ ether_input_task(intptr_t exinf)
 
 	/* ARP を初期化する。*/
 	arp_init();
+	// TODO: cArp_init
 
 #endif	/* of #if defined(_IP4_CFG) */
 
@@ -464,7 +469,7 @@ ether_input_task(intptr_t exinf)
 			if (rcount == 0) {
 
 #ifdef ETHER_CFG_COLLECT_ADDR
-				memcpy(ether_collect_addr.lladdr, eth->shost, 
+				memcpy(ether_collect_addr.lladdr, eth->shost,
 				sizeof(ether_collect_addr.lladdr));
 #endif	/* of #ifdef ETHER_CFG_COLLECT_ADDR */
 
@@ -553,6 +558,7 @@ ether_input_task(intptr_t exinf)
 				}
 			}
 		}
+#endif
 	}
 
 #endif /* of #ifdef SUPPORT_ETHER */
