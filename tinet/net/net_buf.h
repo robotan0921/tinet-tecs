@@ -46,10 +46,12 @@
 #error "CPU_NET_ALIGN expected."
 #endif
 
+#include <net/tecs_net_buf.h>
+
 /*
  *  テンプレート
  */
-
+#if 0	/* Already defined in tecs_net_buf.h */
 struct t_net_buf {
 	uint16_t	len;	/* データの長さ		*/
 	uint8_t		idix;	/* mpfid のインデックス	*/
@@ -70,6 +72,7 @@ typedef struct t_net_buf T_NET_BUF;
 #define T_NET_BUF_DEFINED
 
 #endif	/* of #ifndef T_NET_BUF_DEFINED */
+#endif	/* of #if 0 */
 
 /*
  *  64 オクテット

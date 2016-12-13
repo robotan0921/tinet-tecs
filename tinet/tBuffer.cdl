@@ -11,12 +11,12 @@ signature sMemoryPoolStatus {
 celltype tNewFixedSizeMemoryPool {
 	[inline] entry sFixedSizeMemoryPool eFixedSizeMemoryPool;   /* 固定長メモリプール操作（タスクコンテキスト用）*/
     [inline] entry sMemoryPoolStatus eMemoryPoolStatus;         /* 追加：メモリプールのサイズを取得する */
-    
+
 	attr {
 		ID id = C_EXP( "MPFID_$id$" );
 		/*
- 		 * TA_NULL デフォルト値（FIFO待ち） 
-		 * TA_TPRI 待ち行列をタスクの優先度順にする 
+ 		 * TA_NULL デフォルト値（FIFO待ち）
+		 * TA_TPRI 待ち行列をタスクの優先度順にする
 		 */
 		[omit] ATR attribute = C_EXP("TA_NULL");
 		[omit] uint32_t blockCount;
@@ -38,9 +38,8 @@ celltype tNewFixedSizeMemoryPool {
 
 
 //ネットワークバッファ用の定義をインクルード
-import_C ("Buffer_define.h");
-//import_C ("tinet/net/net_buf.h");
-  
+import_C("tinet/net/tecs_net_buf.h");
+
 //ネットワークバッファの数
 const uint8_t NUM_NETWORK_BUFFER = 6;
 
@@ -103,7 +102,7 @@ cell tNetworkBuffer NetworkBuffer {
 /*cell tNetworkBuffer NetworkBuffer{
 
     size = {SIZE_000,SIZE_001,SIZE_002,SIZE_003,SIZE_004,SIZE_005};
- 
+
     cFixedSizeMemoryPool[0] = NetworkBuffer_000.eFixedSizeMemoryPool;
     cFixedSizeMemoryPool[1] = NetworkBuffer_001.eFixedSizeMemoryPool;
     cFixedSizeMemoryPool[2] = NetworkBuffer_002.eFixedSizeMemoryPool;
@@ -121,10 +120,10 @@ composite tNetworkBufferComposite {
         [size_is(12)]uint8_t *size;
         [size_is(12)]uint8_t *count;
     };
-    
+
 
     //使わないバッファはコメントアウトが必要
-    
+
 /*    cell tFixedSizeMemoryPool NetworkBuffer0 {
         blockCount= composite.count[0];
         blockSize = composite.size[0];
