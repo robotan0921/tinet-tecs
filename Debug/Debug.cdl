@@ -3,7 +3,7 @@ import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
 import("net/tEthernet.cdl");
 
-cell tKernel Kernel{
+cell tKernel Kernel {
 };
 
 /**
@@ -23,8 +23,7 @@ cell tTask EthernetInputTask {
 cell tEthernetInputTaskBody EthernetInputTaskBody {
 
     //cTaskNetworkTimer = NetTimerTask.eTask;
-    //cTaskEthernetOutput = EthernetOutputTask.eTask;
-
+    cTaskEthernetOutput = EthernetOutputTask.eTask;
     cSemaphoreReceive = SemaphoreNicReceive.eSemaphore;
     cNicDriver = IfMbed.eNicDriver;
 
@@ -32,7 +31,7 @@ cell tEthernetInputTaskBody EthernetInputTaskBody {
     //cIPv4Input = IPv4Input.eIPv4Input;
 };
 
-cell tTask EthernetOutputTask{
+cell tTask EthernetOutputTask {
 
     cTaskBody = EthernetOutputTaskBody.eTaskBody;
 
@@ -41,8 +40,8 @@ cell tTask EthernetOutputTask{
     stackSize = C_EXP("ETHER_OUTPUT_STACK_SIZE");
 };
 
-//[allocator(eRawOutput.ethernetRawOutput.outputp=NetworkBuffer.eNetworkAlloc)]
-cell tEthernetOutputTaskBody EthernetOutputTaskBody{
+[allocator(eRawOutput.ethernetRawOutput.outputp=NetworkBuffer.eNetworkAlloc)]
+cell tEthernetOutputTaskBody EthernetOutputTaskBody {
 
     cNicDriver = IfMbed.eNicDriver;
     cSemaphoreSend = SemaphoreNicSend.eSemaphore;
@@ -50,6 +49,13 @@ cell tEthernetOutputTaskBody EthernetOutputTaskBody{
     cDataqueue = DataqueueEthernet.eDataqueue;
 };
 
+//[allocator(eEthernetOutput.ethernetOutput.outputp=NetworkBuffer.eNetworkAlloc)]
+cell tEthernetOutput EthernetOutput {
+
+    cNicDriver = IfMbed.eNicDriver;
+    //cArpOutput = Arp.eArpOutput;
+    cRawOutput = EthernetOutputTaskBody.eRawOutput;
+};
 
 /**
 *   物理層
@@ -71,6 +77,7 @@ cell tIfMbed IfMbed {
 };
 
 cell tTask IfMbedPhyTask {
+
     cTaskBody = IfMbedPhyTaskBody.eTaskBody;
 
     attribute = C_EXP("TA_NULL");
@@ -82,6 +89,7 @@ cell tIfMbedPhyTaskBody IfMbedPhyTaskBody {
 };
 
 cell tIfMbedAdapter IfMbedAdapter {
+
 	cNicDriver = IfMbed.eNicDriver;
 };
 
@@ -89,26 +97,31 @@ cell tIfMbedAdapter IfMbedAdapter {
 *   Dataquque, Semaphore etc.
 */
 cell tDataqueue DataqueueEthernet{
+
     attribute                   = C_EXP("TA_NULL");
     dataCount                   = 1;
     dataqueueManagementBuffer   = C_EXP("NULL");
 };
 cell tSemaphore SemaphoreNicSend {
+
     attribute 		= C_EXP("TA_TPRI");
     initialCount 	= 1;
     maxCount 		= 1;
 };
 cell tSemaphore SemaphoreNicReceive {
+
     attribute 		= C_EXP("TA_TPRI");
     initialCount 	= 0;
     maxCount 		= 1;
 };
-cell tSemaphore SemaphoreTcppost{
+cell tSemaphore SemaphoreTcppost {
+
     attribute       = C_EXP("TA_TPRI");
     initialCount    = 0;
     maxCount        = 1;
 };
 cell tISRWithInterruptRequest NicInterrupt {
+
 	ciISRBody = IfMbed.eiBody;
 
 	interruptNumber 	= (0x200);

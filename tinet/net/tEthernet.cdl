@@ -26,7 +26,7 @@
 */
 import_C("net/tecs_ethernet.h");
 
-signature sArpInput{
+signature sArpInput {
     void arpInitialize(void);
     void arpInput([send(sNetworkAlloc),size_is(size)] int8_t *inputp,[in]int32_t size,[in,size_is(6)]const uint8_t *macaddress);
 };
@@ -52,15 +52,15 @@ celltype tEthernetInputTaskBody {
 
 
 
-signature sEthernetRawOutput{
+signature sEthernetRawOutput {
     ER ethernetRawOutput([send(sNetworkAlloc),size_is(size)]int8_t *outputp,[in]int32_t size,[in]TMO tmout);
 };
 
-signature sArpOutput{
+signature sArpOutput {
     ER arpResolve([send(sNetworkAlloc),size_is(size)] int8_t *outputp,[in]int32_t size,[in]T_IN4_ADDR dstaddr,[in,size_is(6)]const uint8_t *macaddress,[in]TMO tmout);
 };
 
-signature sEthernetOutput{
+signature sEthernetOutput {
     ER ethernetOutput([send(sNetworkAlloc),size_is(size)] int8_t *outputp,[in]int32_t size,[in]T_IN4_ADDR dstaddr,[in]TMO tmout);
 };
 
@@ -69,9 +69,8 @@ celltype tEthernetOutput {
     call sNicDriver cNicDriver;
     [optional]call sArpOutput cArpOutput;
 
-    entry sEthernetOutput eEthernetOutput;
+    //entry sEthernetOutput eEthernetOutput;
 };
-
 
 celltype tEthernetOutputTaskBody {
 
@@ -83,7 +82,7 @@ celltype tEthernetOutputTaskBody {
 
     [optional]call sSemaphore cSemaphoreTcppost;
 
-    //entry sEthernetRawOutput eRawOutput;
+    entry sEthernetRawOutput eRawOutput;
     entry sTaskBody eTaskBody;
 };
 
