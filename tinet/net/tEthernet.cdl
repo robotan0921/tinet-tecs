@@ -81,10 +81,10 @@ celltype tEthernetOutputTaskBody {
     call sDataqueue cDataqueue;
     call sNicDriver cNicDriver;
 
-    [optional]call sSemaphore cSemTcppost;
+    [optional]call sSemaphore cSemaphoreTcppost;
 
-    entry sEthernetRawOutput eRawOutput;
-    entry sTaskBody eBody;
+    //entry sEthernetRawOutput eRawOutput;
+    entry sTaskBody eTaskBody;
 };
 
 /* コンポジット内部のセンドレシーブが使えない
