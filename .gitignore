@@ -49,6 +49,7 @@ gen/
 
 # Others
 set_env.sh
+cp.sh
 .svn
 *.sublime-project
 *.sublime-workspace
