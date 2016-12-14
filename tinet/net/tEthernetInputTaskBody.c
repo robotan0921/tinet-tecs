@@ -174,12 +174,15 @@ eTaskBody_main(CELLIDX idx)
 	ic = IF_ETHER_NIC_GET_SOFTC();
 	IF_ETHER_NIC_PROBE(ic);
 	IF_ETHER_NIC_INIT(ic);
+	// TODO: cNicDriver_init();
 
 	/* Ethernet 出力タスクを起動する */
 	syscall(act_tsk(ETHER_OUTPUT_TASK));
+	// TODO: cTaskEthernetOutput_activate( );
 
 	/* ネットワークタイマタスクを起動する */
 	syscall(act_tsk(NET_TIMER_TASK));
+	// TODO: cTaskNetworkTimer_activate();
 
 	get_tid(&tskid);
 
@@ -190,7 +193,7 @@ eTaskBody_main(CELLIDX idx)
 
 	/* ARP を初期化する。*/
 	arp_init();
-	// TODO: cArp_init
+	// TODO: cArpInput_arpInitialize();
 
 #endif	/* of #if defined(_IP4_CFG) */
 
@@ -201,7 +204,9 @@ eTaskBody_main(CELLIDX idx)
 
 	while (true) {
 		syscall(wai_sem(ic->semid_rxb_ready));
+		// TODO: cSemaphoreReceive_wait();
 		if ((input = IF_ETHER_NIC_READ(ic)) != NULL) {
+			// 	cNicDriver_read((int8_t**)&input,(int32_t*)&size,NETBUFFER_ALIGN);
 			NET_COUNT_ETHER(net_count_ether.in_octets,  input->len);
 			NET_COUNT_MIB(if_stats.ifInOctets, input->len + 8);
 			NET_COUNT_ETHER(net_count_ether.in_packets, 1);
@@ -257,10 +262,12 @@ eTaskBody_main(CELLIDX idx)
 
 			case ETHER_TYPE_IP:		/* IP	*/
 				ip_input(input);
+				// TODO: cIPv4Input_IPv4Input((int8_t*)input,size);
 				break;
 
 			case ETHER_TYPE_ARP:		/* ARP	*/
 				arp_input(&ic->ifaddr, input);
+				// TODO: cArpInput_arpInput((int8_t*)input,size,macaddress);
 				break;
 
 #endif	/* of #if defined(_IP4_CFG) */
