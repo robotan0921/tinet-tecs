@@ -2,6 +2,7 @@ import("tBuffer.cdl");
 import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
 import("net/tEthernet.cdl");
+import("netinet/tArp.cdl");
 
 cell tKernel Kernel {
 };
@@ -10,6 +11,19 @@ cell tKernel Kernel {
 *   イーサネット層
 *
 **/
+
+[allocator(eArpInput.arpInput.inputp=NetworkBuffer.eNetworkAlloc,
+           eArpOutput.arpResolve.outputp=NetworkBuffer.eNetworkAlloc)]
+cell tArp Arp {
+
+    cEthernetRawOutput = EthernetOutputTaskBody.eRawOutput;
+    //cIPv4Functions = IPv4Functions.eFunctions;
+
+    //cNetworkTimer = NetworkTimer.eNetworkTimer[1];
+    cArpSemaphore = ArpSemaphore.eSemaphore;
+
+    arpEntry = 10;
+};
 
 cell tTask EthernetInputTask {
 
@@ -27,7 +41,7 @@ cell tEthernetInputTaskBody EthernetInputTaskBody {
     cSemaphoreReceive = SemaphoreNicReceive.eSemaphore;
     cNicDriver = IfMbed.eNicDriver;
 
-    //cArpInput = Arp.eArpInput;
+    cArpInput = Arp.eArpInput;
     //cIPv4Input = IPv4Input.eIPv4Input;
 };
 
@@ -53,7 +67,7 @@ cell tEthernetOutputTaskBody EthernetOutputTaskBody {
 cell tEthernetOutput EthernetOutput {
 
     cNicDriver = IfMbed.eNicDriver;
-    //cArpOutput = Arp.eArpOutput;
+    cArpOutput = Arp.eArpOutput;
     cRawOutput = EthernetOutputTaskBody.eRawOutput;
 };
 
@@ -96,6 +110,11 @@ cell tIfMbedAdapter IfMbedAdapter {
 /*
 *   Dataquque, Semaphore etc.
 */
+cell tSemaphore ArpSemaphore{
+    attribute       = C_EXP("TA_TPRI");
+    initialCount    = 1;
+    maxCount        = 1;
+};
 cell tDataqueue DataqueueEthernet{
 
     attribute                   = C_EXP("TA_NULL");

@@ -97,13 +97,15 @@ extern void ether_map_ipv4_multicast (T_ETHER_ADDR *eaddr, T_IN4_ADDR maddr);
 /*
  *  ARP キャッシュエントリ
  */
-
+#include "netinet/tecs_if_ether.h"
+#if 0
 typedef struct arp_entry {
 	T_NET_BUF	*hold;		/* ARP の解決待ち出力フレーム	*/
 	T_IN4_ADDR	ip_addr;	/* IP アドレス			*/
 	uint16_t	expire;		/* 破棄までの時間、0 なら未使用	*/
 	uint8_t		mac_addr[ETHER_ADDR_LEN];	/* MAC アドレス	*/
 	} T_ARP_ENTRY;
+#endif
 
 /*
  *  関数
