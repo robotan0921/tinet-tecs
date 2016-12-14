@@ -351,6 +351,9 @@ ether_output (T_NET_BUF *output, const void *dst, T_IF_ADDR *gw, TMO tmout)
 void
 ether_output_task(intptr_t exinf)
 {
+/* #define TSKID_tTask_EthernetOutputTask	2 */
+	act_tsk(2);
+#if 0
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*output;
 	ID		tskid;
@@ -390,13 +393,14 @@ ether_output_task(intptr_t exinf)
 #ifdef SUPPORT_TCP
 				sig_sem(SEM_TCP_POST_OUTPUT);
 #endif	/* of #ifdef SUPPORT_TCP */
-				}
+			}
 
 #endif	/* of #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF */
 
-			}
 		}
 	}
+#endif
+}
 
 /*
  *  Ethernet 入力タスク
@@ -559,6 +563,6 @@ ether_input_task(intptr_t exinf)
 			}
 		}
 #endif
-	}
+}
 
 #endif /* of #ifdef SUPPORT_ETHER */

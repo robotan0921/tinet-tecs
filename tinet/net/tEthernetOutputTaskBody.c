@@ -93,6 +93,47 @@
 #define	E_ID	(-18)	/* illegal ID */
 #endif
 
+#include <string.h>
+
+#ifdef TARGET_KERNEL_ASP
+
+#include <kernel.h>
+#include <sil.h>
+#include <t_syslog.h>
+#include "kernel_cfg.h"
+
+#endif	/* of #ifdef TARGET_KERNEL_ASP */
+
+#ifdef TARGET_KERNEL_JSP
+
+#include <s_services.h>
+#include <t_services.h>
+#include "kernel_id.h"
+
+#endif	/* of #ifdef TARGET_KERNEL_JSP */
+
+#include <tinet_defs.h>
+#include <tinet_config.h>
+
+#include <net/if.h>
+#include <net/ethernet.h>
+#include <net/if_llc.h>
+#include <net/if_arp.h>
+#include <net/net.h>
+#include <net/net_var.h>
+#include <net/net_buf.h>
+#include <net/net_timer.h>
+#include <net/net_count.h>
+
+#include <netinet/in.h>
+#include <netinet/in_var.h>
+#include <netinet/if_ether.h>
+
+#include <netinet6/if6_ether.h>
+#include <netinet6/nd6.h>
+
+#include <net/if_var.h>
+
 /* 受け口関数 #_TEPF_# */
 /* #[<ENTRY_PORT>]# eTaskBody
  * entry port: eTaskBody
@@ -117,7 +158,51 @@ eTaskBody_main(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	T_IF_SOFTC	*ic;
+	T_NET_BUF	*output;
+	ID		tskid;
 
+	get_tid(&tskid);
+	syslog(LOG_NOTICE, "[ETHER OUTPUT:%d] started.", tskid);
+
+	ic = IF_ETHER_NIC_GET_SOFTC();
+
+	while (true) {
+		while (rcv_dtq(DTQ_ETHER_OUTPUT, (intptr_t*)&output) == E_OK) {
+			NET_COUNT_ETHER(net_count_ether.out_octets,  output->len);
+			NET_COUNT_MIB(if_stats.ifOutOctets, output->len + 8);
+			NET_COUNT_ETHER(net_count_ether.out_packets, 1);
+
+#ifdef SUPPORT_MIB
+			if ((*(GET_ETHER_HDR(output)->dhost) & ETHER_MCAST_ADDR) == 0) {
+				NET_COUNT_MIB(if_stats.ifOutUcastPkts, 1);
+				}
+			else {
+				NET_COUNT_MIB(if_stats.ifOutNUcastPkts, 1);
+				}
+#endif	/* of #ifdef SUPPORT_MIB */
+
+			syscall(wai_sem(ic->semid_txb_ready));
+
+			IF_ETHER_NIC_START(ic, output);
+
+#ifndef ETHER_NIC_CFG_RELEASE_NET_BUF
+
+			if ((output->flags & NB_FLG_NOREL_IFOUT) == 0) {
+				syscall(rel_net_buf(output));
+				}
+			else {
+				output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
+
+#ifdef SUPPORT_TCP
+				sig_sem(SEM_TCP_POST_OUTPUT);
+#endif	/* of #ifdef SUPPORT_TCP */
+			}
+
+#endif	/* of #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF */
+
+		}
+	}
 }
 
 /* #[<POSTAMBLE>]#
