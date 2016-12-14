@@ -165,6 +165,9 @@ eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmo
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	ER error = E_OK;
+	T_NET_BUF *output = (T_NET_BUF*)outputp;	// TODO
+
 	/* Ethernet 出力キューに投入する。*/
 	if ((error = tsnd_dtq(DTQ_ETHER_OUTPUT, (intptr_t)output, tmout)) != E_OK) {
 		NET_COUNT_ETHER(net_count_ether.out_err_packets, 1);
@@ -178,7 +181,7 @@ eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmo
 			output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
 			}
 		IF_ETHER_NIC_RESET(IF_ETHER_NIC_GET_SOFTC());
-		}
+	}
 
 	return(ercd);
 }
