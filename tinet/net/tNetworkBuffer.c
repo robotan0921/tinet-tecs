@@ -50,7 +50,7 @@ ER
 eNetworkAlloc_alloc(void** buf, const int32_t minlen, TMO tmout)
 {
 	int32_t len = minlen+sizeof(T_NET_BUF);
-	
+
 	if (minlen > cMemoryPoolStatus_getSize(0)) {
 		syslog(LOG_EMERG, "[NET BUF] E_PAR, minlen=%4d > %4d",minlen,cMemoryPoolStatus_getSize(0));
 		return E_PAR;
@@ -83,7 +83,7 @@ eNetworkAlloc_alloc(void** buf, const int32_t minlen, TMO tmout)
 
 	*buf = NULL;
 	return error;
-	
+
 }
 
 /* #[<ENTRY_FUNC>]# eNetworkAlloc_dealloc
@@ -97,7 +97,7 @@ eNetworkAlloc_dealloc(const void* buf)
 
 	T_NET_BUF *tmp = (T_NET_BUF *)buf;
 	ER error;
-	
+
 	/* ネットワークバッファの ID の正当性を検証する。*/
 	if ((int_t)tmp->idix >= (int_t)N_CP_cFixedSizeMemoryPool) {
 		syslog(LOG_EMERG, "[NET BUF] E_ID, ID=%d.", tmp->idix);
@@ -108,9 +108,8 @@ eNetworkAlloc_dealloc(const void* buf)
 		error = cFixedSizeMemoryPool_release(tmp->idix,buf);
 
 	}
-	   
+
 	return error;
-	
 }
 
 /* #[<ENTRY_FUNC>]# eNetworkAlloc_reuse
