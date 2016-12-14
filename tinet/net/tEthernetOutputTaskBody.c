@@ -169,6 +169,7 @@ eTaskBody_main(CELLIDX idx)
 
 	while (true) {
 		while (rcv_dtq(DTQ_ETHER_OUTPUT, (intptr_t*)&output) == E_OK) {
+			// TODO: cDataqueue_receive((intptr_t*)&output
 			NET_COUNT_ETHER(net_count_ether.out_octets,  output->len);
 			NET_COUNT_MIB(if_stats.ifOutOctets, output->len + 8);
 			NET_COUNT_ETHER(net_count_ether.out_packets, 1);
@@ -183,8 +184,10 @@ eTaskBody_main(CELLIDX idx)
 #endif	/* of #ifdef SUPPORT_MIB */
 
 			syscall(wai_sem(ic->semid_txb_ready));
+			// TODO: cSemaphoreSend_wait();
 
 			IF_ETHER_NIC_START(ic, output);
+			// TODO: cNicDriver_start((int8_t *)output,size,NETBUFFER_ALIGN);
 
 #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF
 
@@ -196,6 +199,7 @@ eTaskBody_main(CELLIDX idx)
 
 #ifdef SUPPORT_TCP
 				sig_sem(SEM_TCP_POST_OUTPUT);
+				// TODO: cSemTcppost_signal();
 #endif	/* of #ifdef SUPPORT_TCP */
 			}
 
