@@ -82,6 +82,12 @@
  *   ER             cNicDriver_read_inputp_reuse( void* buf );
  *   ER_UINT        cNicDriver_read_inputp_bufferSize( const void* buf );
  *   uint32_t       cNicDriver_read_inputp_bufferMaxSize( );
+ * allocator port for call port:eRawOutput func:ethernetRawOutput param: outputp
+ *   ER             eRawOutput_ethernetRawOutput_outputp_alloc( void** buf, const int32_t minlen, TMO tmout );
+ *   ER             eRawOutput_ethernetRawOutput_outputp_dealloc( const void* buf );
+ *   ER             eRawOutput_ethernetRawOutput_outputp_reuse( void* buf );
+ *   ER_UINT        eRawOutput_ethernetRawOutput_outputp_bufferSize( const void* buf );
+ *   uint32_t       eRawOutput_ethernetRawOutput_outputp_bufferMaxSize( );
  *
  * #[</PREAMBLE>]# */
 
@@ -135,6 +141,48 @@
 #include <net/if_var.h>
 
 /* 受け口関数 #_TEPF_# */
+/* #[<ENTRY_PORT>]# eRawOutput
+ * entry port: eRawOutput
+ * signature:  sEthernetRawOutput
+ * context:    task
+ * #[</ENTRY_PORT>]# */
+
+/* #[<ENTRY_FUNC>]# eRawOutput_ethernetRawOutput
+ * name:         eRawOutput_ethernetRawOutput
+ * global_name:  tEthernetOutputTaskBody_eRawOutput_ethernetRawOutput
+ * oneway:       false
+ * #[</ENTRY_FUNC>]# */
+ER
+eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmout)
+{
+	ER		ercd = E_OK;
+	CELLCB	*p_cellcb;
+	if (VALID_IDX(idx)) {
+		p_cellcb = GET_CELLCB(idx);
+	}
+	else {
+		return(E_ID);
+	} /* end if VALID_IDX(idx) */
+
+	/* ここに処理本体を記述します #_TEFB_# */
+	/* Ethernet 出力キューに投入する。*/
+	if ((error = tsnd_dtq(DTQ_ETHER_OUTPUT, (intptr_t)output, tmout)) != E_OK) {
+		NET_COUNT_ETHER(net_count_ether.out_err_packets, 1);
+		NET_COUNT_MIB(if_stats.ifOutDiscards, 1);
+
+		/* IF でネットワークバッファを開放しないフラグをチェックする。*/
+		if ((output->flags & NB_FLG_NOREL_IFOUT) == 0) {
+			syscall(rel_net_buf(output));
+			}
+		else {
+			output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
+			}
+		IF_ETHER_NIC_RESET(IF_ETHER_NIC_GET_SOFTC());
+		}
+
+	return(ercd);
+}
+
 /* #[<ENTRY_PORT>]# eTaskBody
  * entry port: eTaskBody
  * signature:  sTaskBody
