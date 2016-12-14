@@ -1,4 +1,4 @@
-import("tBuffer.cdl");
+import("net/tBuffer.cdl");
 import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
 import("net/tEthernet.cdl");
