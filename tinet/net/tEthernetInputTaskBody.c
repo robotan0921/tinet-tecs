@@ -38,6 +38,20 @@
  *   ER             cTaskEthernetOutput_resume( );
  *   ER             cTaskEthernetOutput_raiseTerminate( );
  *   ER             cTaskEthernetOutput_terminate( );
+ * call port: cTaskNetworkTimer signature: sTask context:task
+ *   ER             cTaskNetworkTimer_activate( );
+ *   ER_UINT        cTaskNetworkTimer_cancelActivate( );
+ *   ER             cTaskNetworkTimer_getTaskState( STAT* p_tskstat );
+ *   ER             cTaskNetworkTimer_changePriority( PRI priority );
+ *   ER             cTaskNetworkTimer_getPriority( PRI* p_priority );
+ *   ER             cTaskNetworkTimer_refer( T_RTSK* pk_taskStatus );
+ *   ER             cTaskNetworkTimer_wakeup( );
+ *   ER_UINT        cTaskNetworkTimer_cancelWakeup( );
+ *   ER             cTaskNetworkTimer_releaseWait( );
+ *   ER             cTaskNetworkTimer_suspend( );
+ *   ER             cTaskNetworkTimer_resume( );
+ *   ER             cTaskNetworkTimer_raiseTerminate( );
+ *   ER             cTaskNetworkTimer_terminate( );
  * call port: cArpInput signature: sArpInput context:task optional:true
  *   bool_t     is_cArpInput_joined()                     check if joined
  *   void           cArpInput_arpInitialize( );

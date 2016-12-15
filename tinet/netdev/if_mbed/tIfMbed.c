@@ -66,6 +66,8 @@
  * call port: cInterruptRequest signature: sInterruptRequest context:task
  *   ER             cInterruptRequest_disable( );
  *   ER             cInterruptRequest_enable( );
+ * call port: cNetworkTimer signature: sNetworkTimer context:task
+ *   ER             cNetworkTimer_timeout( RELTIM timout );
  * call port: cTask signature: sTask context:task
  *   ER             cTask_activate( );
  *   ER_UINT        cTask_cancelActivate( );
@@ -238,6 +240,32 @@ if_mbed_addmulti (T_IF_SOFTC *ic) {
 #endif	/* of #ifdef SUPPORT_INET6 */
 
 /* 受け口関数 #_TEPF_# */
+/* #[<ENTRY_PORT>]# eWatchdogTimer
+ * entry port: eWatchdogTimer
+ * signature:  sCallTimerFunction
+ * context:    task
+ * #[</ENTRY_PORT>]# */
+
+/* #[<ENTRY_FUNC>]# eWatchdogTimer_callFunction
+ * name:         eWatchdogTimer_callFunction
+ * global_name:  tIfMbed_eWatchdogTimer_callFunction
+ * oneway:       false
+ * #[</ENTRY_FUNC>]# */
+void
+eWatchdogTimer_callFunction(CELLIDX idx)
+{
+	CELLCB	*p_cellcb;
+	if (VALID_IDX(idx)) {
+		p_cellcb = GET_CELLCB(idx);
+	}
+	else {
+		/* エラー処理コードをここに記述します */
+	} /* end if VALID_IDX(idx) */
+
+	/* ここに処理本体を記述します #_TEFB_# */
+
+}
+
 /* #[<ENTRY_PORT>]# eNicDriver
  * entry port: eNicDriver
  * signature:  sNicDriver

@@ -5,12 +5,12 @@ celltype tArp {
     //call sIPv4Functions cIPv4Functions;
     call sEthernetRawOutput cEthernetRawOutput;
 
-    //call sNetworkTimer cNetworkTimer;
+    call sNetworkTimer cNetworkTimer;
     call sSemaphore cArpSemaphore;
 
     entry sArpInput eArpInput;
     entry sArpOutput eArpOutput;
-    //entry sCallTimerFunction eArpTimer;
+    entry sCallTimerFunction eArpTimer;
 
     attr{
         int32_t arpEntry;

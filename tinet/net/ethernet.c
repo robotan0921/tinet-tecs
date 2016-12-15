@@ -351,8 +351,8 @@ ether_output (T_NET_BUF *output, const void *dst, T_IF_ADDR *gw, TMO tmout)
 void
 ether_output_task(intptr_t exinf)
 {
-/* #define TSKID_tTask_EthernetOutputTask	2 */
-	act_tsk(2);
+/* TSKID_tTask_EthernetOutputTask */
+	act_tsk(TSKID_tTask_EthernetOutputTask);
 #if 0
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*output;
@@ -409,8 +409,8 @@ ether_output_task(intptr_t exinf)
 void
 ether_input_task(intptr_t exinf)
 {
-	/* #define TSKID_tTask_EthernetInputTask	1 */
-	act_tsk(1);
+	/* TSKID_tTask_EthernetInputTask */
+	act_tsk(TSKID_tTask_EthernetInputTask);
 #if 0
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*input;

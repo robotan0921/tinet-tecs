@@ -10,12 +10,14 @@
  * tecsmerge によるマージに使用されます
  *
  * 属性アクセスマクロ #_CAAM_#
- * arpEntry         int32_t          ATTR_arpEntry   
- * arp_cache        T_ARP_ENTRY*     VAR_arp_cache   
+ * arpEntry         int32_t          ATTR_arpEntry
+ * arp_cache        T_ARP_ENTRY*     VAR_arp_cache
  *
  * 呼び口関数 #_TCPF_#
  * call port: cEthernetRawOutput signature: sEthernetRawOutput context:task
  *   ER             cEthernetRawOutput_ethernetRawOutput( int8_t* outputp, int32_t size, TMO tmout );
+ * call port: cNetworkTimer signature: sNetworkTimer context:task
+ *   ER             cNetworkTimer_timeout( RELTIM timout );
  * call port: cArpSemaphore signature: sSemaphore context:task
  *   ER             cArpSemaphore_signal( );
  *   ER             cArpSemaphore_wait( );
@@ -125,6 +127,32 @@ eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dst
 	/* ここに処理本体を記述します #_TEFB_# */
 
 	return(ercd);
+}
+
+/* #[<ENTRY_PORT>]# eArpTimer
+ * entry port: eArpTimer
+ * signature:  sCallTimerFunction
+ * context:    task
+ * #[</ENTRY_PORT>]# */
+
+/* #[<ENTRY_FUNC>]# eArpTimer_callFunction
+ * name:         eArpTimer_callFunction
+ * global_name:  tArp_eArpTimer_callFunction
+ * oneway:       false
+ * #[</ENTRY_FUNC>]# */
+void
+eArpTimer_callFunction(CELLIDX idx)
+{
+	CELLCB	*p_cellcb;
+	if (VALID_IDX(idx)) {
+		p_cellcb = GET_CELLCB(idx);
+	}
+	else {
+		/* エラー処理コードをここに記述します */
+	} /* end if VALID_IDX(idx) */
+
+	/* ここに処理本体を記述します #_TEFB_# */
+
 }
 
 /* #[<POSTAMBLE>]#

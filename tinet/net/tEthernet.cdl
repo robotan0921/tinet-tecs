@@ -42,7 +42,7 @@ celltype tEthernetInputTaskBody {
     call sNicDriver cNicDriver;
 
     [optional]call sTask cTaskEthernetOutput;
-    //call sTask cTaskNetworkTimer;
+    call sTask cTaskNetworkTimer;
 
     [optional]call sArpInput cArpInput;
     [optional]call sIPv4Input cIPv4Input;

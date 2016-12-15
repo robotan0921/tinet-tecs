@@ -1,4 +1,6 @@
 import("net/tBuffer.cdl");
+import("netinet/tNetworkTimer.cdl");
+
 import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
 import("net/tEthernet.cdl");
@@ -19,7 +21,7 @@ cell tArp Arp {
     cEthernetRawOutput = EthernetOutputTaskBody.eRawOutput;
     //cIPv4Functions = IPv4Functions.eFunctions;
 
-    //cNetworkTimer = NetworkTimer.eNetworkTimer[1];
+    cNetworkTimer = NetworkTimer.eNetworkTimer[1];
     cArpSemaphore = ArpSemaphore.eSemaphore;
 
     arpEntry = 10;
@@ -36,7 +38,7 @@ cell tTask EthernetInputTask {
 
 cell tEthernetInputTaskBody EthernetInputTaskBody {
 
-    //cTaskNetworkTimer = NetTimerTask.eTask;
+    cTaskNetworkTimer = NetworkTimerTask.eTask;
     cTaskEthernetOutput = EthernetOutputTask.eTask;
     cSemaphoreReceive = SemaphoreNicReceive.eSemaphore;
     cNicDriver = IfMbed.eNicDriver;
@@ -85,7 +87,7 @@ cell tIfMbed IfMbed {
 	cSemaphoreReceive 	= SemaphoreNicReceive.eSemaphore;
 	cInterruptRequest 	= NicInterrupt.eInterruptRequest;
 
-    //cNetworkTimer = NetworkTimer.eNetworkTimer[0];
+    cNetworkTimer = NetworkTimer.eNetworkTimer[0];
 
     cTask = IfMbedPhyTask.eTask;
 };
@@ -146,4 +148,21 @@ cell tISRWithInterruptRequest NicInterrupt {
 	interruptNumber 	= (0x200);
 	interruptAttribute 	= C_EXP("TA_ENAINT");
 	interruptPriority 	= -8;
+};
+
+/**
+*   タイマ組み上げ宣言
+**/
+cell tNetworkTimer NetworkTimer{
+    //cTCPTask = TCPTask.eTask;
+
+    /* 有効なネットワークタイマ宣言 */
+    cCallTimerFunction[0] = IfMbed.eWatchdogTimer;
+    cCallTimerFunction[1] = Arp.eArpTimer;
+    //cCallTimerFunction[2] = IPv4RoutingTable.eRoutingTableTimer;
+    //cCallTimerFunction[3] = TCPOutputBody.eCallTimerFunction;
+
+    cSemaphoreNetworkTimer  = SemaphoreNetworkTimer.eSemaphore;
+    ciSemaphoreNetworkTimer = SemaphoreNetworkTimer.eiSemaphore;
+    cSemaphoreCalloutLock   = SemaphoreCalloutLock.eSemaphore;
 };

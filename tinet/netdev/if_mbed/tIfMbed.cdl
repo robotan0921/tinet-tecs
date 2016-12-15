@@ -15,10 +15,10 @@ celltype tIfMbed {
 	//call siSemaphore ciSemaphoreReceive;
     call sSemaphore cSemaphoreReceive;
 	call sInterruptRequest cInterruptRequest;
-	//call sNetworkTimer cNetworkTimer;
+	call sNetworkTimer cNetworkTimer;
     call sTask cTask;
 
-	//entry sCallTimerFunction eWatchdogTimer;
+	entry sCallTimerFunction eWatchdogTimer;
 	entry sNicDriver eNicDriver;
 	entry siHandlerBody eiBody;
 
