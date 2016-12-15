@@ -49,13 +49,8 @@
  *   ER             exitKernel( );
  *   ER             changeInterruptPriorityMask( PRI interruptPriority );
  *   ER             getInterruptPriorityMask( PRI* p_interruptPriority );
- * call port: cSemaphoreSend signature: sSemaphore context:task
- *   ER             cSemaphoreSend_signal( );
- *   ER             cSemaphoreSend_wait( );
- *   ER             cSemaphoreSend_waitPolling( );
- *   ER             cSemaphoreSend_waitTimeout( TMO timeout );
- *   ER             cSemaphoreSend_initialize( );
- *   ER             cSemaphoreSend_refer( T_RSEM* pk_semaphoreStatus );
+ * call port: ciSemaphoreSend signature: siSemaphore context:non-task
+ *   ER             ciSemaphoreSend_signal( );
  * call port: cSemaphoreReceive signature: sSemaphore context:task
  *   ER             cSemaphoreReceive_signal( );
  *   ER             cSemaphoreReceive_wait( );
@@ -535,7 +530,7 @@ if_mbed_watchdog (T_IF_SOFTC *ic) {
 /*
  *  MBED Ethernet Controler 送受信割り込みハンドラ
  */
-void
+void	// TODO: Componentize (TECS)
 if_mbed_eth_handler (void) {
 	if ((ETHER.EESR0 & ETHER_EESR0_TC) != 0) {
 		/* 送信割り込み処理 */

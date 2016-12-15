@@ -82,8 +82,7 @@ cell tEthernetOutput EthernetOutput {
 			eNicDriver.read.inputp=NetworkBuffer.eNetworkAlloc)]
 cell tIfMbed IfMbed {
 
-	cSemaphoreSend 		= SemaphoreNicSend.eSemaphore;
-	//ciSemaphoreReceive 	= SemaphoreNicReceive.eiSemaphore;
+	ciSemaphoreSend 		= SemaphoreNicSend.eiSemaphore;
 	cSemaphoreReceive 	= SemaphoreNicReceive.eSemaphore;
 	cInterruptRequest 	= NicInterrupt.eInterruptRequest;
 

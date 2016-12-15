@@ -11,8 +11,7 @@ signature sNicDriver {
 celltype tIfMbed {
 	require tKernel.eKernel;
 
-	call sSemaphore cSemaphoreSend;
-	//call siSemaphore ciSemaphoreReceive;
+	call siSemaphore ciSemaphoreSend;
     call sSemaphore cSemaphoreReceive;
 	call sInterruptRequest cInterruptRequest;
 	call sNetworkTimer cNetworkTimer;
