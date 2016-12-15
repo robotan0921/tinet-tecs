@@ -10,14 +10,14 @@
  * tecsmerge によるマージに使用されます
  *
  * 属性アクセスマクロ #_CAAM_#
- * macaddr0         uint8_t          VAR_macaddr0    
- * macaddr1         uint8_t          VAR_macaddr1    
- * macaddr2         uint8_t          VAR_macaddr2    
- * macaddr3         uint8_t          VAR_macaddr3    
- * macaddr4         uint8_t          VAR_macaddr4    
- * macaddr5         uint8_t          VAR_macaddr5    
- * timer            uint16_t         VAR_timer       
- * sc               T_MBED_SOFTC*    VAR_sc          
+ * macaddr0         uint8_t          VAR_macaddr0
+ * macaddr1         uint8_t          VAR_macaddr1
+ * macaddr2         uint8_t          VAR_macaddr2
+ * macaddr3         uint8_t          VAR_macaddr3
+ * macaddr4         uint8_t          VAR_macaddr4
+ * macaddr5         uint8_t          VAR_macaddr5
+ * timer            uint16_t         VAR_timer
+ * sc               T_MBED_SOFTC*    VAR_sc
  *
  * 呼び口関数 #_TCPF_#
  * require port: signature:sKernel context:task
@@ -386,9 +386,7 @@ eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 		NET_COUNT_ETHER_NIC(net_count_ether_nic[NC_ETHER_NIC_NO_BUFS], 1);
 	}
 
-	//sig_sem(ic->semid_rxb_ready);
-	sig_sem(6);
-	//cSemaphoreReceive_signal();
+	cSemaphoreReceive_signal();
 	return input;
 }
 
@@ -488,9 +486,8 @@ eiBody_main(CELLIDX idx)
  * #[</POSTAMBLE>]#*/
 
 static void rza1_recv_callback(void) {
-	CELLCB	*p_cellcb;
-    sig_sem(if_softc.semid_rxb_ready);	// TODO
-    //cSemaphoreReceive_signal();
+	CELLCB *p_cellcb;
+    cSemaphoreReceive_signal();
 }
 
 static void

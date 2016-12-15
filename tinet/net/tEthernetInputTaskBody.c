@@ -189,8 +189,8 @@ eTaskBody_main(CELLIDX idx)
 	/* NIC を初期化する。*/
 	ic = IF_ETHER_NIC_GET_SOFTC();
 	IF_ETHER_NIC_PROBE(ic);
-	IF_ETHER_NIC_INIT(ic);
-	// TODO: cNicDriver_init();
+	cNicDriver_init();
+	cNicDriver_probe( macaddress );
 
 	/* Ethernet 出力タスクを起動する */
 	if( is_cTaskEthernetOutput_joined() )
@@ -203,7 +203,7 @@ eTaskBody_main(CELLIDX idx)
 	get_tid(&tskid);
 
 	syslog(LOG_NOTICE, "[ETHER INPUT:%2d] started on MAC Addr: %s.",
-	                   tskid, mac2str(NULL, ic->ifaddr.lladdr));
+	                   tskid, mac2str(NULL, macaddress));
 
 #if defined(_IP4_CFG)
 
@@ -219,8 +219,7 @@ eTaskBody_main(CELLIDX idx)
 	net_srand(0);
 
 	while (true) {
-		syscall(wai_sem(ic->semid_rxb_ready));
-		// TODO: cSemaphoreReceive_wait();
+		cSemaphoreReceive_wait();
 		if ((input = IF_ETHER_NIC_READ(ic)) != NULL) {
 			// 	cNicDriver_read((int8_t**)&input, (int32_t*)&size, NETBUFFER_ALIGN);
 			NET_COUNT_ETHER(net_count_ether.in_octets,  input->len);
@@ -282,10 +281,8 @@ eTaskBody_main(CELLIDX idx)
 				break;
 
 			case ETHER_TYPE_ARP:		/* ARP	*/
-				if( is_cArpInput_joined() ) {
-					cNicDriver_probe(macaddress);
+				if( is_cArpInput_joined() )
 					cArpInput_arpInput((int8_t*)input, size, macaddress);
-				}
 				break;
 
 #endif	/* of #if defined(_IP4_CFG) */
