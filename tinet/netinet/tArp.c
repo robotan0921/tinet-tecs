@@ -54,6 +54,9 @@
 #define	E_ID	(-18)	/* illegal ID */
 #endif
 
+#include <net/if_arp.h>
+#include <net/net_timer.h>
+
 /* 受け口関数 #_TEPF_# */
 /* #[<ENTRY_PORT>]# eArpInput
  * entry port: eArpInput
@@ -78,7 +81,7 @@ eArpInput_arpInitialize(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-
+	cNetworkTimer_timeout(ARP_TIMER_TMO);
 }
 
 /* #[<ENTRY_FUNC>]# eArpInput_arpInput
@@ -98,7 +101,6 @@ eArpInput_arpInput(CELLIDX idx, int8_t* inputp, int32_t size, const uint8_t* mac
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-
 }
 
 /* #[<ENTRY_PORT>]# eArpOutput
