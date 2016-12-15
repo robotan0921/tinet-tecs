@@ -171,6 +171,8 @@ eTaskBody_main(CELLIDX idx)
 	ID		tskid;
 	uint16_t	proto;
 	uint8_t		rcount = 0;
+	int32_t size;
+	uint8_t macaddress[6];
 
 	/* ネットワークインタフェース管理を初期化する。*/
 	ifinit();
@@ -191,8 +193,8 @@ eTaskBody_main(CELLIDX idx)
 	// TODO: cNicDriver_init();
 
 	/* Ethernet 出力タスクを起動する */
-	syscall(act_tsk(ETHER_OUTPUT_TASK));
-	// TODO: cTaskEthernetOutput_activate( );
+	if( is_cTaskEthernetOutput_joined() )
+		cTaskEthernetOutput_activate( );
 
 	/* ネットワークタイマタスクを起動する */
 	syscall(act_tsk(NET_TIMER_TASK));
@@ -206,8 +208,8 @@ eTaskBody_main(CELLIDX idx)
 #if defined(_IP4_CFG)
 
 	/* ARP を初期化する。*/
-	arp_init();
-	// TODO: cArpInput_arpInitialize();
+	if( is_cArpInput_joined() )
+		cArpInput_arpInitialize();
 
 #endif	/* of #if defined(_IP4_CFG) */
 
@@ -220,7 +222,7 @@ eTaskBody_main(CELLIDX idx)
 		syscall(wai_sem(ic->semid_rxb_ready));
 		// TODO: cSemaphoreReceive_wait();
 		if ((input = IF_ETHER_NIC_READ(ic)) != NULL) {
-			// 	cNicDriver_read((int8_t**)&input,(int32_t*)&size,NETBUFFER_ALIGN);
+			// 	cNicDriver_read((int8_t**)&input, (int32_t*)&size, NETBUFFER_ALIGN);
 			NET_COUNT_ETHER(net_count_ether.in_octets,  input->len);
 			NET_COUNT_MIB(if_stats.ifInOctets, input->len + 8);
 			NET_COUNT_ETHER(net_count_ether.in_packets, 1);
@@ -280,8 +282,10 @@ eTaskBody_main(CELLIDX idx)
 				break;
 
 			case ETHER_TYPE_ARP:		/* ARP	*/
-				arp_input(&ic->ifaddr, input);
-				// TODO: cArpInput_arpInput((int8_t*)input,size,macaddress);
+				if( is_cArpInput_joined() ) {
+					cNicDriver_probe(macaddress);
+					cArpInput_arpInput((int8_t*)input, size, macaddress);
+				}
 				break;
 
 #endif	/* of #if defined(_IP4_CFG) */
