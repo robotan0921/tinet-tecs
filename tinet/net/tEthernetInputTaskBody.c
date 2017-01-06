@@ -276,8 +276,7 @@ eTaskBody_main(CELLIDX idx)
 #if defined(_IP4_CFG)
 
 			case ETHER_TYPE_IP:		/* IP	*/
-				ip_input(input);
-				// TODO: cIPv4Input_IPv4Input((int8_t*)input,size);
+				cIPv4Input_IPv4Input((int8_t*)input, size);
 				break;
 
 			case ETHER_TYPE_ARP:		/* ARP	*/
