@@ -3,8 +3,11 @@ import("netinet/tNetworkTimer.cdl");
 
 import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
+
 import("net/tEthernet.cdl");
 import("netinet/tArp.cdl");
+
+import("netinet/tIPv4.cdl");
 
 cell tKernel Kernel {
 };
