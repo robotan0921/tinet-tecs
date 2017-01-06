@@ -1,3 +1,5 @@
+import_C("netinet/tecs_in_var.h");
+import_C("netinet/in4.h");
 import_C("netinet/in4_var.h");
 
 signature sUDPInput {
@@ -103,8 +105,8 @@ celltype tIPv4RoutingTable {
     attr {
         int32_t numStaticEntry   = 3;
         int32_t numRedirectEntry = 1;
-        [size_is(numStaticEntry)]T_IN4_RTENTRY *staticRoutingTable;
         int32_t timeout;
+        [size_is(numStaticEntry)]T_IN4_RTENTRY *staticRoutingTable;
     };
     var {
         [size_is(numRedirectEntry)]T_IN4_RTENTRY *routingTable;

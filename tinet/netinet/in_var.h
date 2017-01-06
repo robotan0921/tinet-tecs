@@ -100,9 +100,12 @@
 /*
  *  ルーティングエントリ状態フラグ
  */
+#ifndef IN_RTF_DEFINED
 
 #define IN_RTF_DEFINED		UINT_C(0x01)	/* 定義済み			*/
 #define IN_RTF_REDIRECT		UINT_C(0x10)	/* 向け直しにより自動設定された	*/
+
+#endif /* IN_RTF_DEFINED */
 
 /*
  *  IPv4 と IPv6 をコンパイル時に選択するためのマクロ

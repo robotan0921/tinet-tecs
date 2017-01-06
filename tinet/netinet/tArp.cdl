@@ -2,7 +2,7 @@ import_C("netinet/tecs_if_ether.h");
 
 celltype tArp {
 
-    //call sIPv4Functions cIPv4Functions;
+    call sIPv4Functions cFunctions;
     call sEthernetRawOutput cEthernetRawOutput;
 
     call sNetworkTimer cNetworkTimer;

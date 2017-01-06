@@ -5,11 +5,71 @@ import("netdev/if_mbed/tIfMbed.cdl");
 import("netdev/if_mbed/tIfMbedAdapter.cdl");
 
 import("net/tEthernet.cdl");
-import("netinet/tArp.cdl");
 
 import("netinet/tIPv4.cdl");
+import("netinet/tArp.cdl");
+
 
 cell tKernel Kernel {
+};
+
+/**
+*   プロトコル層
+*
+**/
+const T_IN4_ADDR MYIP4ADDRESS = C_EXP("MAKE_IPV4_ADDR(192,168,1,200)");
+const T_IN4_ADDR MYIP4MASK    = C_EXP("MAKE_IPV4_ADDR(255,255,255,0)");
+const T_IN4_ADDR MYIP4GATAWAY = C_EXP("MAKE_IPV4_ADDR(192,168,1,1)");
+
+cell tIPv4RoutingTable IPv4RoutingTable {
+
+    cSemaphore    = SemaphoreIPv4Routing.eSemaphore;
+    cNetworkTimer = NetworkTimer.eNetworkTimer[2];
+
+    numStaticEntry   = 3;
+    numRedirectEntry = 1;
+    timeout          = 10;
+    staticRoutingTable = {
+        {0, 0, C_EXP("MYIP4GATAWAY"), 0, C_EXP("IN_RTF_DEFINED")},
+        {C_EXP("MYIP4ADDRESS &MYIP4MASK"), C_EXP("MYIP4MASK"), 0, 0, C_EXP("IN_RTF_DEFINED")},
+        {C_EXP("0xffffffff,0xffffffff,0"), 0, C_EXP("IN_RTF_DEFINED")}
+    };
+};
+
+cell tIPv4Functions IPv4Functions {
+
+    IPv4AddressInit = MYIP4ADDRESS;
+    IPv4MaskInit    = MYIP4MASK;
+    IPv4GatawayInit = MYIP4GATAWAY;
+};
+
+[allocator(eICMP4.input.inputp=NetworkBuffer.eNetworkAlloc,
+           eICMP4Error.error.inputp=NetworkBuffer.eNetworkAlloc)]
+cell tICMP4 ICMP4 {
+
+    //cTCPInput      = TCPInput.eInput;
+    cIPv4Reply     = IPv4Output.eOutput;
+    cIPv4Functions = IPv4Functions.eFunctions;
+};
+
+[allocator(eIPv4Input.IPv4Input.inputp=NetworkBuffer.eNetworkAlloc)]
+cell tIPv4Input IPv4Input {
+
+    cFunctions  = IPv4Functions.eFunctions;
+    cICMP4      = ICMP4.eICMP4;
+    cICMP4Error = ICMP4.eICMP4Error;
+    //cUDPInput   = UDPInput.eInput;
+    //cTCPInput   = TCPInput.eInput;
+};
+
+[allocator(eOutput.IPv4Output.outputp=NetworkBuffer.eNetworkAlloc,
+           eOutput.IPv4Reply.outputp=NetworkBuffer.eNetworkAlloc)]
+cell tIPv4Output IPv4Output {
+
+    cEthernetOutput = EthernetOutput.eEthernetOutput;
+    cFunctions      = IPv4Functions.eFunctions;
+    cRoutingTable   = IPv4RoutingTable.eRoutingTable;
+    cIPv4CheckSum   = IPv4Functions.eCheckSum;
 };
 
 /**
@@ -22,7 +82,7 @@ cell tKernel Kernel {
 cell tArp Arp {
 
     cEthernetRawOutput = EthernetOutputTaskBody.eRawOutput;
-    //cIPv4Functions = IPv4Functions.eFunctions;
+    cFunctions = IPv4Functions.eFunctions;
 
     cNetworkTimer = NetworkTimer.eNetworkTimer[1];
     cArpSemaphore = ArpSemaphore.eSemaphore;
@@ -47,7 +107,7 @@ cell tEthernetInputTaskBody EthernetInputTaskBody {
     cNicDriver = IfMbed.eNicDriver;
 
     cArpInput = Arp.eArpInput;
-    //cIPv4Input = IPv4Input.eIPv4Input;
+    cIPv4Input = IPv4Input.eIPv4Input;
 };
 
 cell tTask EthernetOutputTask {
@@ -68,7 +128,7 @@ cell tEthernetOutputTaskBody EthernetOutputTaskBody {
     cDataqueue = DataqueueEthernet.eDataqueue;
 };
 
-//[allocator(eEthernetOutput.ethernetOutput.outputp=NetworkBuffer.eNetworkAlloc)]
+[allocator(eEthernetOutput.ethernetOutput.outputp=NetworkBuffer.eNetworkAlloc)]
 cell tEthernetOutput EthernetOutput {
 
     cNicDriver = IfMbed.eNicDriver;
@@ -85,7 +145,7 @@ cell tEthernetOutput EthernetOutput {
 			eNicDriver.read.inputp=NetworkBuffer.eNetworkAlloc)]
 cell tIfMbed IfMbed {
 
-	ciSemaphoreSend 		= SemaphoreNicSend.eiSemaphore;
+	ciSemaphoreSend 	= SemaphoreNicSend.eiSemaphore;
 	cSemaphoreReceive 	= SemaphoreNicReceive.eSemaphore;
 	cInterruptRequest 	= NicInterrupt.eInterruptRequest;
 
@@ -114,7 +174,14 @@ cell tIfMbedAdapter IfMbedAdapter {
 /*
 *   Dataquque, Semaphore etc.
 */
-cell tSemaphore ArpSemaphore{
+cell tSemaphore SemaphoreIPv4Routing {
+
+    attribute       = C_EXP("TA_TPRI");
+    initialCount    = 1;
+    maxCount        = 1;
+};
+cell tSemaphore ArpSemaphore {
+
     attribute       = C_EXP("TA_TPRI");
     initialCount    = 1;
     maxCount        = 1;

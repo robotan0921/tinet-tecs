@@ -69,7 +69,7 @@ celltype tEthernetOutput {
     call sNicDriver cNicDriver;
     [optional]call sArpOutput cArpOutput;
 
-    //entry sEthernetOutput eEthernetOutput;
+    entry sEthernetOutput eEthernetOutput;
 };
 
 celltype tEthernetOutputTaskBody {
