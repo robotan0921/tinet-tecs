@@ -117,9 +117,10 @@ static T_ARP_ENTRY arp_cache[NUM_ARP_ENTRY];
  *  関数
  */
 
-static void in_arpinput (T_IF_ADDR *ifaddr, T_NET_BUF *input);
+//static void in_arpinput (T_IF_ADDR *ifaddr, T_NET_BUF *input);
 static void arp_timer (void *ignore);
 
+#if 0
 /*
  *  in_arpinput -- TCP/IP 用 ARP の入力関数
  */
@@ -250,7 +251,7 @@ err_ret:
 buf_rel:
 	syscall(rel_net_buf(input));
 	}
-
+#endif
 /*
  *  arp_timer -- ARP キャッシュの更新
  */
@@ -279,7 +280,7 @@ arp_timer (void *ignore)
 	syscall(sig_sem(SEM_ARP_CACHE_LOCK));
 	timeout(arp_timer, NULL, ARP_TIMER_TMO);
 	}
-
+#if 1
 /*
  *  arp_lookup -- ARP キャッシュの探索と登録
  *
@@ -326,7 +327,8 @@ arp_lookup (T_IN4_ADDR addr, bool_t create)
 	else
 		return NULL;
 	}
-
+#endif
+#if 1
 /*
  *  arp_request -- MAC アドレス解決要求
  */
@@ -375,7 +377,7 @@ arp_request (T_IF_ADDR *ifaddr, T_IN4_ADDR dst)
 		NET_COUNT_ARP(net_count_arp.out_err_packets, 1);
 	return error;
 	}
-
+#endif
 /*
  *  arp_get_cache -- ARP キャッシュを獲得する。
  */
@@ -385,7 +387,7 @@ arp_get_cache (void)
 {
 	return arp_cache;
 	}
-
+#if 0
 /*
  *  arp_input -- ARP の入力関数
  */
@@ -423,7 +425,8 @@ buf_rel:
 	NET_COUNT_ARP(net_count_arp.in_err_packets, 1);
 	syscall(rel_net_buf(input));
 	}
-
+#endif
+#if 1
 /*
  *  arp_resolve -- MAC アドレス解決
  *
@@ -485,7 +488,8 @@ arp_resolve (T_IF_ADDR *ifaddr, T_NET_BUF *output, T_IN4_ADDR gw)
 		return false;
 		}
 	}
-
+#endif
+#if 0
 /*
  *  arp_init -- ARP 初期化
  */
@@ -495,6 +499,7 @@ arp_init (void)
 {
 	timeout(arp_timer, NULL, ARP_TIMER_TMO);
 	}
+#endif
 
 #ifdef ETHER_CFG_MULTICAST
 /*
