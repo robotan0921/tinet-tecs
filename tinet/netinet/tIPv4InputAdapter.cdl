@@ -1,0 +1,5 @@
+
+[singleton, active]
+celltype tIPv4InputAdapter {
+	call sIPv4Input cIPv4Input;
+};

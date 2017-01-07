@@ -375,6 +375,7 @@ ip_remove_options (T_NET_BUF *nbuf)
  */
 #endif /* of defined(SUPPORT_IPSEC) */
 
+#if 0
 void
 ip_input (T_NET_BUF *input)
 {
@@ -603,5 +604,6 @@ buf_rel:
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_PACKETS], 1);
 	syscall(rel_net_buf(input));
 	}
+#endif
 
 #endif	/* of #if defined(_IP4_CFG) */
