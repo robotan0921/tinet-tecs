@@ -292,7 +292,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		src = ntohl(ip4h->src);
 		syslog(LOG_WARNING, "[IP] flaged src: %s.", ip2str(NULL, &src));
 		goto buf_rel;
-		}
+	}
 
 #endif	/* of #ifdef IP4_CFG_FRAGMENT */
 
@@ -313,7 +313,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 	//TODO: if(is_cTCPInput_joined()){
 		NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
 		tcp_input(&input, &off, NULL);
-		//TODO: cTCPInput_TCPInput(inputp,size,(int8_t*)&dst,(int8_t*)&src,4);
+		//TODO: cTCPInput_TCPInput(inputp, size, (int8_t*)&dst, (int8_t*)&src, 4);
 		return;
 		break;
 #endif	/* of #if defined(SUPPORT_TCP) */
@@ -324,7 +324,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 	//TODO: if(is_cUDPInput_joined()){
 		NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
 		udp4_input(&input, &off, NULL);
-		//TODO: cUDPInput_UDPInput(inputp,size, (int8_t *)&dst,4 );//dstはホストオーダ順で入っている[0]=200 [1]=1 [2]=168 [3]=192//offmikan
+		//TODO: cUDPInput_UDPInput(inputp, size, (int8_t *)&dst,4 );//dstはホストオーダ順で入っている[0]=200 [1]=1 [2]=168 [3]=192//offmikan
 		return;
 		break;
 #endif	/* of #if defined(SUPPORT_UDP) && TNUM_UDP4_CEPID > 0 */
@@ -332,8 +332,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 	case IPPROTO_ICMP:
 		//TODO: if(is_cICMP4_joined()){
 		NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
-		icmp_input(&input, &off, NULL);
-		//TODO: cICMP4_input(inputp,size);
+		cICMP4_input(inputp, off);	//TODO: off = size ??
 		return;
 		break;
 
