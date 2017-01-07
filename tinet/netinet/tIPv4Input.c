@@ -186,8 +186,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 	input->len = (uint16_t)(ntohs(ip4h->len) + IF_HDR_SIZE);
 
 	/* チェックサムをチェックする。*/
-	if (in_cksum(ip4h, hlen) != 0) {
-		//TODO: if (cFunctions_checkSum(ip4h, hlen) != 0) {
+	if (cFunctions_checkSum(ip4h, hlen) != 0) {
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_CKSUM], 1);
 		NET_COUNT_MIB(ip_stats.ipInHdrErrors, 1);
 		goto buf_rel;
