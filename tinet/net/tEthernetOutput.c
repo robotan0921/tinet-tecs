@@ -56,6 +56,8 @@
 #define	E_ID	(-18)	/* illegal ID */
 #endif
 
+//TODO: Add the entry function (Should apply tecsmerge)
+
 /* #[<POSTAMBLE>]#
  *   これより下に非受け口関数を書きます
  * #[</POSTAMBLE>]#*/
