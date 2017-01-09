@@ -10,6 +10,8 @@ import("netinet/tIPv4.cdl");
 import("netinet/tArp.cdl");
 import("netinet/tIPv4InputAdapter.cdl");
 
+import("netinet/tTCP.cdl");
+
 
 cell tKernel Kernel {
 };

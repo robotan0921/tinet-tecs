@@ -207,6 +207,8 @@ typedef struct t_net_buf T_NET_BUF;
 
 #endif	/* of #ifndef T_NET_BUF_DEFINED */
 
+#ifndef T_TCP_CEP_DEFINED
+
 typedef struct t_tcp_cep {
 
 	/*
@@ -356,6 +358,11 @@ typedef struct t_tcp_cep {
 
 #define T_TCP6_CEP	T_TCP_CEP
 #define T_TCP4_CEP	T_TCP_CEP
+
+#define T_TCP_CEP_DEFINED
+
+#endif	/* of #ifndef T_TCP_CEP_DEFINED */
+
 
 /*
  * Time Wait 用 TCP 通信端点
