@@ -87,7 +87,7 @@
 
 /* net/net_timer.c */
 
-#define timeout			_tinet_timeout
+//#define timeout			_tinet_timeout
 #define untimeout		_tinet_untimeout
 #define busy_callout		_tinet_busy_callout
 #define max_busy		_tinet_max_busy

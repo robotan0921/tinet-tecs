@@ -1,12 +1,12 @@
 
-//接続しているタイマー関数(多めでもOKが）
-const uint32_t NUM_NETWORKTIMER=5;
+/* 接続しているタイマー関数(多めでもOKが） */
+const uint32_t NUM_NETWORKTIMER = 5;
 
-//タイマの軌道周期
-const uint32_t NET_TIMER_CYCLE=100;
+/* タイマの軌道周期 */
+const uint32_t NET_TIMER_CYCLE = 100;
 
-//タイマタスクの優先度
-const int32_t NET_TIMER_PRIORITY=3;
+/* タイマタスクの優先度 */
+const int32_t NET_TIMER_PRIORITY = 3;
 
 signature sCallTimerFunction {
     void callFunction(void);
@@ -30,7 +30,7 @@ celltype tNetworkTimer {
     entry sTaskBody eTaskBody;
     entry siHandlerBody eiHandlerBody;
 
-    /*attr{
+    /*attr {
         [size_is(NUM_NETWORKTIMER)]int32_t *timeoutTemp;
     };*/
 
