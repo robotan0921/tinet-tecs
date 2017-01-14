@@ -12,12 +12,49 @@ import("netinet/tIPv4InputAdapter.cdl");
 
 import("netinet/tTCP.cdl");
 
+//TCPCEPの数
+const uint32_t NUM_TCPCEP = 1;
 
 cell tKernel Kernel {
 };
 
 /**
-*   プロトコル層
+*   トランスポート層
+*
+**/
+[allocator(eInput.TCPInput.inputp=NetworkBuffer.eNetworkAlloc),generate(RepeatPlugin ,"count = NUM_TCPCEP")] //TODO: 逆リクワイアsendが使えないためとりあえず
+cell tTCPInput TCPInput {
+
+    //cCEPInput[0]  = TCPCEP_000.eInput;
+    cIPv4CheckSum = IPv4Functions.eCheckSum;
+    cTCPRespond   = TCPOutputBody.eTCPOutput;
+};
+
+[generate(RepeatPlugin ,"count = NUM_TCPCEP"),allocator(eTCPOutput.output.outputp=NetworkBuffer.eNetworkAlloc,
+                                                        eTCPOutput.respond.outputp=NetworkBuffer.eNetworkAlloc)]
+cell tTCPOutputBody TCPOutputBody {
+    //cTCPOutputStart[0] = TCPCEP_000.eTCPOutputStart;
+    cIPv4Output        = IPv4Output.eOutput;
+    cIPv4CheckSum      = IPv4Functions.eCheckSum;
+    cSemaphore         = SemaphoreTcppost.eSemaphore;
+    cNetworkTimer      = NetworkTimer.eNetworkTimer[3];
+    cTCPFunctions      = TCPFunctions.eTCPFunctions;
+};
+
+cell tTask TCPTask {
+
+    cTaskBody = TCPOutputBody.eTaskBody;
+
+    attribute = C_EXP("TA_NULL");
+    priority  = 5;
+    stackSize = 1024;
+};
+
+cell tTCPFunctions TCPFunctions {
+};
+
+/**
+*   ネットワーク層
 *
 **/
 const T_IN4_ADDR MYIP4ADDRESS = C_EXP("MAKE_IPV4_ADDR(192,168,1,200)");
@@ -184,6 +221,12 @@ cell tIPv4InputAdapter IPv4InputAdapter {
 /*
 *   Dataquque, Semaphore etc.
 */
+cell tSemaphore SemaphoreTcppost {
+
+    attribute       = C_EXP("TA_TPRI");
+    initialCount    = 0;
+    maxCount        = 1;
+};
 cell tSemaphore SemaphoreIPv4Routing {
 
     attribute       = C_EXP("TA_TPRI");
@@ -214,12 +257,6 @@ cell tSemaphore SemaphoreNicReceive {
     initialCount 	= 0;
     maxCount 		= 1;
 };
-cell tSemaphore SemaphoreTcppost {
-
-    attribute       = C_EXP("TA_TPRI");
-    initialCount    = 0;
-    maxCount        = 1;
-};
 cell tISRWithInterruptRequest NicInterrupt {
 
 	ciISRBody = IfMbed.eiBody;
@@ -233,13 +270,13 @@ cell tISRWithInterruptRequest NicInterrupt {
 *   タイマ組み上げ宣言
 **/
 cell tNetworkTimer NetworkTimer{
-    //cTCPTask = TCPTask.eTask;
+    cTCPTask = TCPTask.eTask;
 
     /* 有効なネットワークタイマ宣言 */
     cCallTimerFunction[0] = IfMbed.eWatchdogTimer;
     cCallTimerFunction[1] = Arp.eArpTimer;
-    //cCallTimerFunction[2] = IPv4RoutingTable.eRoutingTableTimer;
-    //cCallTimerFunction[3] = TCPOutputBody.eCallTimerFunction;
+    cCallTimerFunction[2] = IPv4RoutingTable.eRoutingTableTimer;
+    cCallTimerFunction[3] = TCPOutputBody.eCallTimerFunction;
 
     cSemaphoreNetworkTimer  = SemaphoreNetworkTimer.eSemaphore;
     ciSemaphoreNetworkTimer = SemaphoreNetworkTimer.eiSemaphore;
