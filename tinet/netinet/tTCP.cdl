@@ -324,7 +324,7 @@ composite tTCPCEP4 {
         cInitializeRoutineBody = TCPCEP.eInitializeRoutineBody;
     };
 
-    composite.eInput          => TCPCEP.eInput;
+    composite.eCEPInput          => TCPCEP.eCEPInput;
     composite.eAPI            => TCPCEPwrapper4.eAPI4;
     composite.eTCPOutputStart => TCPCEP.eTCPOutputStart;
 };
