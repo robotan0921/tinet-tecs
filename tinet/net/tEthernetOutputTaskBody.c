@@ -170,6 +170,7 @@ eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmo
 
 	/* Ethernet 出力キューに投入する。*/
 	if ((error = tsnd_dtq(DTQ_ETHER_OUTPUT, (intptr_t)output, tmout)) != E_OK) {
+	//TODO: if((ercd = cDataqueue_sendTimeout((intptr_t)outputp,tmout)) != E_OK){
 		NET_COUNT_ETHER(net_count_ether.out_err_packets, 1);
 		NET_COUNT_MIB(if_stats.ifOutDiscards, 1);
 
@@ -181,6 +182,7 @@ eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmo
 			output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
 			}
 		IF_ETHER_NIC_RESET(IF_ETHER_NIC_GET_SOFTC());
+		//TODO: cNicDriver_reset();
 	}
 
 	return(ercd);
@@ -228,29 +230,29 @@ eTaskBody_main(CELLIDX idx)
 #ifdef SUPPORT_MIB
 			if ((*(GET_ETHER_HDR(output)->dhost) & ETHER_MCAST_ADDR) == 0) {
 				NET_COUNT_MIB(if_stats.ifOutUcastPkts, 1);
-				}
+			}
 			else {
 				NET_COUNT_MIB(if_stats.ifOutNUcastPkts, 1);
-				}
+			}
 #endif	/* of #ifdef SUPPORT_MIB */
 
 			syscall(wai_sem(ic->semid_txb_ready));
 			// TODO: cSemaphoreSend_wait();
 
 			IF_ETHER_NIC_START(ic, output);
-			// TODO: cNicDriver_start((int8_t *)output,size,NETBUFFER_ALIGN);
+			// TODO: cNicDriver_start((int8_t *)output,size, NETBUFFER_ALIGN);
 
 #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF
 
 			if ((output->flags & NB_FLG_NOREL_IFOUT) == 0) {
 				syscall(rel_net_buf(output));
-				}
+			}
 			else {
 				output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
 
 #ifdef SUPPORT_TCP
 				sig_sem(SEM_TCP_POST_OUTPUT);
-				// TODO: cSemTcppost_signal();
+				// TODO: cSemaphoreTcppost_signal();
 #endif	/* of #ifdef SUPPORT_TCP */
 			}
 
