@@ -17,6 +17,18 @@ import("netinet/tTCP.cdl");
 /* CPCEPの数 */
 const uint32_t NUM_TCPCEP = 1;
 
+[generate(RepeatCellPlugin, "count = NUM_TCPCEP"),allocator(eCEPInput.input.inputp=NetworkBuffer.eNetworkAlloc)] //TODO: 逆リクワイアが使えないためとりあえず
+cell tTCPCEP4 TCPCEP_000 {
+
+    cTCPFunctions       = TCPFunctions.eTCPFunctions;
+    cTCPOutput          = TCPOutputBody.eTCPOutput;
+    cSemaphoreTcppost   = SemaphoreTcppost.eSemaphore;
+    cSemaphoreTcpcep    = SemaphoreTcpcep.eSemaphore;
+
+    sbufSize        = 512;
+    rbufSize        = 512;
+};
+
 cell tKernel Kernel {
 };
 
@@ -223,6 +235,12 @@ cell tIPv4InputAdapter IPv4InputAdapter {
 /*
 *   Dataquque, Semaphore etc.
 */
+cell tSemaphore SemaphoreTcpcep {
+
+    attribute       = C_EXP("TA_TPRI");
+    initialCount    = 1;
+    maxCount        = 1;
+};
 cell tSemaphore SemaphoreTcppost {
 
     attribute       = C_EXP("TA_TPRI");

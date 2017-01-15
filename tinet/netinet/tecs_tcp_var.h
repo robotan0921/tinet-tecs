@@ -184,4 +184,38 @@ typedef struct t_tcp_cep {
 
 #endif	/* of #ifndef T_TCP_CEP_DEFINED */
 
+/*
+ *  TCP 通信端点の状態フラグ
+ */
+
+#define TCP_CEP_FLG_IPV4		ULONG_C(0x00000001)	/* IPv4 用。			*/
+#define TCP_CEP_FLG_ACK_NOW		ULONG_C(0x00000100)	/* 直ちに相手に ACK を送る。	*/
+#define TCP_CEP_FLG_DEL_ACK		ULONG_C(0x00000200)	/* ACK を遅延する。		*/
+#define TCP_CEP_FLG_SENT_FIN		ULONG_C(0x00000400)	/* FIN を送ってある。		*/
+#define TCP_CEP_FLG_NEED_SYN		ULONG_C(0x00000800)	/* SYN を送信する。		*/
+#define TCP_CEP_FLG_NEED_FIN		ULONG_C(0x00001000)	/* FIN を送信する。		*/
+#define TCP_CEP_FLG_FORCE		ULONG_C(0x00002000)	/* 強制送信。			*/
+#define TCP_CEP_FLG_NO_PUSH		ULONG_C(0x00004000)	/* push しない。		*/
+#define TCP_CEP_FLG_NO_DELAY		ULONG_C(0x00008000)	/* 遅延しない。			*/
+#define TCP_CEP_FLG_FORCE_CLEAR		ULONG_C(0x00010000)	/* 強制送信した後フラグをクリアーする。*/
+#define TCP_CEP_FLG_POST_OUTPUT		ULONG_C(0x00020000)	/* 送信を開始する。		*/
+#define TCP_CEP_FLG_RESERVE_OUTPUT	ULONG_C(0x00040000)	/* 送信を予約する。		*/
+#define TCP_CEP_FLG_DYNAMIC		ULONG_C(0x00100000)	/* 動的生成・削除可能通信端点。	*/
+#define TCP_CEP_FLG_VALID		ULONG_C(0x00200000)	/* 生成済みで有効な通信端点。	*/
+#define TCP_CEP_FLG_CLOSE_AFTER_OUTPUT	ULONG_C(0x00400000)	/* 送信した後コネクションを閉じる。*/
+#define TCP_CEP_FLG_RESTORE_NEXT_OUTPUT	ULONG_C(0x00800000)	/* 送信した後、snd_nxt を元に戻す。*/
+
+/* 送受信ウィンドバッファの省コピー機能 */
+#define TCP_CEP_FLG_WBCS_NBUF_REQ	ULONG_C(0x80000000)	/* ネットワークバッファ割当て要求*/
+#define TCP_CEP_FLG_WBCS_MASK		ULONG_C(0x70000000)	/* マスク			*/
+#define TCP_CEP_FLG_WBCS_FREE		ULONG_C(0x00000000)	/* 送信ウィンドバッファ未使用	*/
+#define TCP_CEP_FLG_WBCS_WOPEN_PEND	ULONG_C(0x10000000)	/* 相手の受信ウィンドの開き待ち	*/
+#define TCP_CEP_FLG_WBCS_NBUF_PEND	ULONG_C(0x20000000)	/* ネットワークバッファ予約待ち	*/
+#define TCP_CEP_FLG_WBCS_NBUF_RSVD	ULONG_C(0x30000000)	/* ネットワークバッファ予約済み	*/
+#define TCP_CEP_FLG_WBCS_NBUF_READY	ULONG_C(0x40000000)	/* ネットワークバッファ割当て済み*/
+#define TCP_CEP_FLG_WBCS_SEND_READY	ULONG_C(0x50000000)	/* 送信可能			*/
+#define TCP_CEP_FLG_WBCS_SENT		ULONG_C(0x60000000)	/* 送信済みで、ACK待ち		*/
+#define TCP_CEP_FLG_WBCS_ACKED		ULONG_C(0x70000000)	/* 送信済みで、ACK完了		*/
+
+
 #endif	/* of #ifndef _TECS_TCP_VAR_H_ */

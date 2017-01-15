@@ -202,7 +202,7 @@ celltype tTCPCEPwrapper4 {
 celltype tCopySave {
 
     call sSemaphore cSemaphore;
-    call sSemaphore cSemTcppost;
+    call sSemaphore cSemaphoreTcppost;
 
     call sEventflag cSendFlag;
     call sEventflag cRcvFlag;
@@ -220,8 +220,8 @@ celltype tTCPCEP {
     call sTCPFunctions cTCPFunctions;
     call sGetAddress2 cGetAddress;
     call sSemaphore cSemaphore;
-    call sSemaphore cSemTcppost;
-    call sSemaphore cSemTcpcep;
+    call sSemaphore cSemaphoreTcppost;
+    call sSemaphore cSemaphoreTcpcep;
     call sEventflag cSendFlag;
     call sEventflag cRcvFlag;
     call sEventflag cEstFlag;
@@ -258,8 +258,8 @@ celltype tTCPCEP {
 composite tTCPCEP4 {
 
     call sTCPFunctions  cTCPFunctions;
-    call sSemaphore     cSemTcppost;
-    call sSemaphore     cSemTcpcep;
+    call sSemaphore     cSemaphoreTcppost;
+    call sSemaphore     cSemaphoreTcpcep;
     call sTCPOutput     cTCPOutput;
 
     entry sTCPCEPInput      eCEPInput;
@@ -291,7 +291,7 @@ composite tTCPCEP4 {
     };
 
     cell tCopySave CopySave {
-        cSemTcppost => composite.cSemTcppost;
+        cSemaphoreTcppost => composite.cSemaphoreTcppost;
         cSemaphore  = Semaphore.eSemaphore;
         cSendFlag   = SendFlag.eEventflag;
         cRcvFlag    = RcvFlag.eEventflag;
@@ -304,16 +304,16 @@ composite tTCPCEP4 {
         sbufSizeInit = composite.sbufSize;
         rbufSizeInit = composite.rbufSize;
 
-        cCopySave     = CopySave.eCopySave;
-        cTCPFunctions => composite.cTCPFunctions;
-        cSemTcppost   => composite.cSemTcppost;
-        cSemTcpcep    => composite.cSemTcpcep;
-        cSemaphore    = Semaphore.eSemaphore;
-        cSendFlag     = SendFlag.eEventflag;
-        cRcvFlag      = RcvFlag.eEventflag;
-        cEstFlag      = EstFlag.eEventflag;
-        cGetAddress   = TCPCEPwrapper4.eGetAddress4;
-        cTCPOutput    => composite.cTCPOutput;
+        cCopySave           = CopySave.eCopySave;
+        cTCPFunctions       => composite.cTCPFunctions;
+        cSemaphoreTcppost   => composite.cSemaphoreTcppost;
+        cSemaphoreTcpcep    => composite.cSemaphoreTcpcep;
+        cSemaphore          = Semaphore.eSemaphore;
+        cSendFlag           = SendFlag.eEventflag;
+        cRcvFlag            = RcvFlag.eEventflag;
+        cEstFlag            = EstFlag.eEventflag;
+        cGetAddress         = TCPCEPwrapper4.eGetAddress4;
+        cTCPOutput          => composite.cTCPOutput;
     };
 
     cell tTCPCEPwrapper4 TCPCEPwrapper4 {
