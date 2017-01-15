@@ -78,7 +78,6 @@ signature sCopySave {
     void        tcpFreeSwbufq([inout]T_TCP_CEP *cep);
 };
 
-
 signature sREP4 {
     T_IPV4EP    getEndpoint(void);
     ER          signal(void);
@@ -108,7 +107,7 @@ celltype tTCPFunctions {
 [singleton]
 celltype tTCPInput {
 
-    call sTCPCEPInput cCEPInput[];
+    //call sTCPCEPInput cCEPInput[];
     call sTCPOutput cTCPRespond;
     [optional]call sIPv4CheckSum cIPv4CheckSum;
 
@@ -123,13 +122,13 @@ celltype tTCPOutputBody {
 
     [optional]call sIPv4Output cIPv4Output;
     [optional]call sIPv4CheckSum cIPv4CheckSum;
-    call sTCPOutputStart cTCPOutputStart[];
+    //call sTCPOutputStart cTCPOutputStart[];
     call sSemaphore cSemaphore;
     call sTCPFunctions cTCPFunctions;
 
     call sNetworkTimer cNetworkTimer;
 
-    entry sTaskBody eBody;
+    entry sTaskBody eTaskBody;
     entry sTCPOutput eTCPOutput;
 
     entry sCallTimerFunction eCallTimerFunction;
@@ -226,15 +225,15 @@ celltype tTCPCEP {
     call sEventflag cSendFlag;
     call sEventflag cRcvFlag;
     call sEventflag cEstFlag;
-    [optional]call sREP4 cREP4;//mikan v4限定になってるしホントはdynamicと記述したい
+    [optional]call sREP4 cREP4;                     //mikan v4限定になってるしホントはdynamicと記述したい
     [optional]call sTask cCallingSendTask;
     [optional]call sTask cCallingReceiveTask;
 
 
     entry sTCPOutputStart eTCPOutputStart;
-    entry sTCPCEPInput eInput;
+    entry sTCPCEPInput eCEPInput;
     entry sTCPCEPAPI eAPI;
-    entry sRoutineBody eInitializeRoutineBody;//mikan 構造体初期化ができないため
+    entry sRoutineBody eInitializeRoutineBody;      //mikan 構造体初期化ができないため
 
     attr {
         int32_t sbufSizeInit;
@@ -250,8 +249,8 @@ celltype tTCPCEP {
         int32_t     rbufSize = rbufSizeInit;
         [size_is(sbufSizeInit)]int8_t *sbuf;
         [size_is(rbufSizeInit)]int8_t *rbuf;
-        uint32_t	flags = C_EXP("TCP_CEP_FLG_VALID");		/* 通信端点フラグ		*/
-        T_TCP_CEP   cep;     /*通信端点管理ブロック*/
+        uint32_t	flags    = C_EXP("TCP_CEP_FLG_VALID");		/* 通信端点フラグ */
+        T_TCP_CEP   cep;                                        /* 通信端点管理ブロック */
     };
 };
 
@@ -263,7 +262,7 @@ composite tTCPCEP4 {
     call sSemaphore     cSemTcpcep;
     call sTCPOutput     cTCPOutput;
 
-    entry sTCPCEPInput      eInput;
+    entry sTCPCEPInput      eCEPInput;
     entry sTCPCEPAPI4       eAPI;
     entry sTCPOutputStart   eTCPOutputStart;
 
@@ -314,7 +313,7 @@ composite tTCPCEP4 {
         cRcvFlag      = RcvFlag.eEventflag;
         cEstFlag      = EstFlag.eEventflag;
         cGetAddress   = TCPCEPwrapper4.eGetAddress4;
-        cTCPOutput    =>composite.cTCPOutput;
+        cTCPOutput    => composite.cTCPOutput;
     };
 
     cell tTCPCEPwrapper4 TCPCEPwrapper4 {

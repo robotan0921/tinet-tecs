@@ -1,3 +1,5 @@
+import_C("net/tecs_net.h");
+
 import("net/tBuffer.cdl");
 import("netinet/tNetworkTimer.cdl");
 
