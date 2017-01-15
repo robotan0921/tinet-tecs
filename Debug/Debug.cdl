@@ -14,7 +14,7 @@ import("netinet/tIPv4InputAdapter.cdl");
 
 import("netinet/tTCP.cdl");
 
-//TCPCEPの数
+/* CPCEPの数 */
 const uint32_t NUM_TCPCEP = 1;
 
 cell tKernel Kernel {

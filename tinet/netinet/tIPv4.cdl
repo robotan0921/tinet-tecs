@@ -15,15 +15,15 @@ signature sTCPInput {
 
 signature sIPv4Output {
     ER IPv4Output([send(sNetworkAlloc),size_is(size)]int8_t *outputp, [in]int32_t size, [in]TMO tmout);
-    //TODO: ER getOffset([inout]T_OFF_BUF *offset);
+    ER getOffset([inout]T_OFF_BUF *offset);
     T_IN4_ADDR getIPv4Address(void);
     void setHeader([inout,size_is(size)]int8_t *outputp, [in]int32_t size, [in]T_IN4_ADDR dstaddr, [in]T_IN4_ADDR srcaddr);
     ER IPv4Reply([send(sNetworkAlloc),size_is(size)]int8_t *outputp, [in]int32_t size, [in]TMO tmout);
 };
 
-/*signature sIPv4Reply {
+signature sIPv4Reply {
     ER IPv4Reply([send(sNetworkAlloc),size_is(size)]int8_t *outputp, [in]int32_t size, [in]uint32_t flag, [in]TMO tmout);
-};*/
+};
 
 signature sICMP4Input {
     uint32_t input([send(sNetworkAlloc),size_is(size)]int8_t *inputp,[in]int32_t size);

@@ -86,6 +86,9 @@
 #include <netinet/in_var.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+
 
 #if defined(SUPPORT_IPSEC)
 #include <netinet6/ipsec.h>
@@ -325,6 +328,37 @@ skip_ipsec:
 #endif /* SUPPORT_IPSEC */
 
 	return ercd;
+}
+
+/* #[<ENTRY_FUNC>]# eOutput_getOffset
+ * name:         eOutput_getOffset
+ * global_name:  tIPv4Output_eOutput_getOffset
+ * oneway:       false
+ * #[</ENTRY_FUNC>]# */
+ER
+eOutput_getOffset(CELLIDX idx, T_OFF_BUF* offset)
+{
+	ER		ercd = E_OK;
+	CELLCB	*p_cellcb;
+	if (VALID_IDX(idx)) {
+		p_cellcb = GET_CELLCB(idx);
+	}
+	else {
+		return(E_ID);
+	} /* end if VALID_IDX(idx) */
+
+	/* ここに処理本体を記述します #_TEFB_# */
+	offset->iphdrlen = IP4_HDR_SIZE;
+	offset->ipmss 	 = TCP_MSS;
+
+	if(is_cEthernetOutput_joined()) {			//mikan いまいち未完
+		offset->protocolflag |= FLAG_USE_ETHER;
+		offset->ifhdrlen 	  = ETHER_HDR_SIZE;
+		offset->ifalign 	  = NETBUFFER_ALIGN;
+		return E_OK;
+	}
+
+	return E_ID;
 }
 
 /* #[<ENTRY_FUNC>]# eOutput_getIPv4Address
