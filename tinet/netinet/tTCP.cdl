@@ -107,7 +107,7 @@ celltype tTCPFunctions {
 [singleton]
 celltype tTCPInput {
 
-    //call sTCPCEPInput cCEPInput[];
+    call sTCPCEPInput cCEPInput[];
     call sTCPOutput cTCPRespond;
     [optional]call sIPv4CheckSum cIPv4CheckSum;
 
@@ -122,7 +122,7 @@ celltype tTCPOutputBody {
 
     [optional]call sIPv4Output cIPv4Output;
     [optional]call sIPv4CheckSum cIPv4CheckSum;
-    //call sTCPOutputStart cTCPOutputStart[];
+    call sTCPOutputStart cTCPOutputStart[];
     call sSemaphore cSemaphore;
     call sTCPFunctions cTCPFunctions;
 

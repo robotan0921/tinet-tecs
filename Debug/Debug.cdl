@@ -39,7 +39,7 @@ cell tKernel Kernel {
 [allocator(eInput.TCPInput.inputp=NetworkBuffer.eNetworkAlloc),generate(RepeatPlugin ,"count = NUM_TCPCEP")] //TODO: 逆リクワイアsendが使えないためとりあえず
 cell tTCPInput TCPInput {
 
-    //cCEPInput[0]  = TCPCEP_000.eInput;
+    cCEPInput[0]  = TCPCEP_000.eCEPInput;
     cIPv4CheckSum = IPv4Functions.eCheckSum;
     cTCPRespond   = TCPOutputBody.eTCPOutput;
 };
@@ -47,7 +47,7 @@ cell tTCPInput TCPInput {
 [generate(RepeatPlugin ,"count = NUM_TCPCEP"),allocator(eTCPOutput.output.outputp=NetworkBuffer.eNetworkAlloc,
                                                         eTCPOutput.respond.outputp=NetworkBuffer.eNetworkAlloc)]
 cell tTCPOutputBody TCPOutputBody {
-    //cTCPOutputStart[0] = TCPCEP_000.eTCPOutputStart;
+    cTCPOutputStart[0] = TCPCEP_000.eTCPOutputStart;
     cIPv4Output        = IPv4Output.eOutput;
     cIPv4CheckSum      = IPv4Functions.eCheckSum;
     cSemaphore         = SemaphoreTcppost.eSemaphore;
@@ -101,7 +101,7 @@ cell tIPv4Functions IPv4Functions {
            eICMP4Error.error.inputp=NetworkBuffer.eNetworkAlloc)]
 cell tICMP4 ICMP4 {
 
-    //cTCPInput      = TCPInput.eInput;
+    cTCPInput      = TCPInput.eInput;
     cIPv4Reply     = IPv4Output.eOutput;
     cIPv4Functions = IPv4Functions.eFunctions;
 };
@@ -113,7 +113,7 @@ cell tIPv4Input IPv4Input {
     cICMP4      = ICMP4.eICMP4;
     cICMP4Error = ICMP4.eICMP4Error;
     //cUDPInput   = UDPInput.eInput;
-    //cTCPInput   = TCPInput.eInput;
+    cTCPInput   = TCPInput.eInput;
 };
 
 [allocator(eOutput.IPv4Output.outputp=NetworkBuffer.eNetworkAlloc,

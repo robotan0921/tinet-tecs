@@ -13,12 +13,17 @@
  * call port: cIPv4Output signature: sIPv4Output context:task optional:true
  *   bool_t     is_cIPv4Output_joined()                     check if joined
  *   ER             cIPv4Output_IPv4Output( int8_t* outputp, int32_t size, TMO tmout );
+ *   ER             cIPv4Output_getOffset( T_OFF_BUF* offset );
  *   T_IN4_ADDR     cIPv4Output_getIPv4Address( );
  *   void           cIPv4Output_setHeader( int8_t* outputp, int32_t size, T_IN4_ADDR dstaddr, T_IN4_ADDR srcaddr );
  *   ER             cIPv4Output_IPv4Reply( int8_t* outputp, int32_t size, TMO tmout );
  * call port: cIPv4CheckSum signature: sIPv4CheckSum context:task optional:true
  *   bool_t     is_cIPv4CheckSum_joined()                     check if joined
  *   uint16_t       cIPv4CheckSum_ipv4CheckSum( int8_t* data, int32_t size, uint32_t offset, uint8_t proto );
+ * call port: cTCPOutputStart signature: sTCPOutputStart context:task
+ *   ER             cTCPOutputStart_outputStart( subscript );
+ *   ER             cTCPOutputStart_timerFunction( subscript );
+ *       subscript:  0...(NCP_cTCPOutputStart-1)
  * call port: cSemaphore signature: sSemaphore context:task
  *   ER             cSemaphore_signal( );
  *   ER             cSemaphore_wait( );
