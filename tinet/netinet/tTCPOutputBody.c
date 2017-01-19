@@ -164,127 +164,20 @@ eTaskBody_main(CELLIDX idx)
 		syscall(wai_sem(SEM_TCP_POST_OUTPUT));
 		//TODO: cSemaphore_wait();
 
-		if (++ last_ix == tmax_tcp_cepid)
-		//TODO: if (++ last_ix == NCP_cTCPOutputStart)
+		if (++ last_ix == NCP_cTCPOutputStart)
 			last_ix = 0;
 		sel_ix = ix = last_ix;
 		do {
-			//TODO: if(cTCPOutputStart_outputStart(ix) == E_OK)
-			  //TODO: sel_ix = ix;
-#if 0	//TODO: Debug
-			cep = &tcp_cep[ix];
-
-#ifdef TCP_CFG_SWBUF_CSAVE
-
-			if ((cep->flags & TCP_CEP_FLG_WBCS_NBUF_REQ) != 0 &&
-			    ((cep->flags & TCP_CEP_FLG_WBCS_MASK) == TCP_CEP_FLG_WBCS_FREE ||
-			     (cep->flags & TCP_CEP_FLG_WBCS_MASK) == TCP_CEP_FLG_WBCS_NBUF_RSVD)) {
-				tcptsk_alloc_swbufq(cep);
+			if(cTCPOutputStart_outputStart(ix) == E_OK)
 				sel_ix = ix;
-			}
 
-			if ((cep->flags & TCP_CEP_FLG_WBCS_MASK) == TCP_CEP_FLG_WBCS_ACKED &&
-			    (cep->swbufq->flags & NB_FLG_NOREL_IFOUT) == 0) {
-				tcptsk_free_swbufq(cep);
-				sel_ix = ix;
-			}
-
-			/*
-			 *  ネットワークインタフェースから送信が終わっていないときは、
-			 *  送信を予約する。
-			 */
-			if (cep->flags & TCP_CEP_FLG_POST_OUTPUT &&
-			   (cep->flags & TCP_CEP_FLG_WBCS_MASK) >= TCP_CEP_FLG_WBCS_SENT) {
-				syscall(wai_sem(cep->semid_lock));
-				if (cep->swbufq == NULL)
-					cep->flags &= ~TCP_CEP_FLG_POST_OUTPUT;
-				else if (cep->swbufq->flags & NB_FLG_NOREL_IFOUT) {
-					cep->flags &= ~TCP_CEP_FLG_POST_OUTPUT;
-					cep->flags |=  TCP_CEP_FLG_RESERVE_OUTPUT;
-				}
-				syscall(sig_sem(cep->semid_lock));
-			}
-
-			/*
-			 *  送信予約中に、ネットワークインタフェースから送信が終了したら、
-			 *  送信を開始する。ただし、完全に送信が終了したときは何もしない。
-			 */
-			if (cep->flags & TCP_CEP_FLG_RESERVE_OUTPUT) {
-				syscall(wai_sem(cep->semid_lock));
-				if (cep->swbufq != NULL && (cep->swbufq->flags & NB_FLG_NOREL_IFOUT) == 0) {
-					cep->flags |=  TCP_CEP_FLG_POST_OUTPUT;
-				}
-				syscall(sig_sem(cep->semid_lock));
-				cep->flags &= ~TCP_CEP_FLG_RESERVE_OUTPUT;
-			}
-
-#endif	/* of #ifdef TCP_CFG_SWBUF_CSAVE */
-
-			if (cep->flags & TCP_CEP_FLG_POST_OUTPUT) {
-
-				cep->flags &= ~TCP_CEP_FLG_POST_OUTPUT;
-
-#ifdef TCP_CFG_NON_BLOCKING
-
-				if (cep->snd_nblk_tfn == TFN_TCP_CON_CEP && cep->myaddr.portno == TCP_PORTANY) {
-				 	ER	error;
-
-					/*
-					 *  tcp_con_cep のノンブロッキングコールで、
-					 *  未割当のの場合は、ポート番号を割り当てる。
-					 *  p_myaddr が NADR (-1) か、
-					 *  自ポート番号が TCP_PORTANY なら、自動で割り当てる。
-					 */
-					if (cep->p_myaddr == NADR || cep->p_myaddr->portno == TCP_PORTANY)
-						tcp_alloc_auto_port(cep);
-					else if ((error = tcp_alloc_port(cep, cep->p_myaddr->portno)) != E_OK) {
-
-						if (IS_PTR_DEFINED(cep->callback))
-#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
-							(*cep->callback)(GET_TCP_CEPID(cep), cep->snd_nblk_tfn, (void*)error);
-#else
-							(*cep->callback)(GET_TCP_CEPID(cep), cep->snd_nblk_tfn, (void*)&error);
-#endif
-						else
-							syslog(LOG_WARNING, "[TCP] no call back, CEP: %d.", GET_TCP_CEPID(cep));
-
-						/* 記憶されているタスク ID と API 機能コードをクリアーする。*/
-						cep->snd_tfn   = cep->snd_nblk_tfn = TFN_TCP_UNDEF;
-						cep->snd_tskid = TA_NULL;
-						continue;
-					}
-				}
-
-#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
-
-				tcp_output(cep);
-
-				if (cep->flags & TCP_CEP_FLG_CLOSE_AFTER_OUTPUT) {
-					/* コネクションを閉じる。*/
-					tcp_close(cep);
-					cep->flags &= ~TCP_CEP_FLG_CLOSE_AFTER_OUTPUT;
-				}
-
-				if (cep->flags & TCP_CEP_FLG_RESTORE_NEXT_OUTPUT) {
-					/* snd_nxt を元に戻す。*/
-					if (SEQ_GT(cep->snd_old_nxt, cep->snd_nxt))
-						cep->snd_nxt = cep->snd_old_nxt;
-					cep->flags &= ~TCP_CEP_FLG_RESTORE_NEXT_OUTPUT;
-				}
-
-				sel_ix = ix;
-			}
-#endif
-
-			if (++ ix == tmax_tcp_cepid)
-			//TODO: if (++ ix == NCP_cTCPOutputStart)
+			if (++ ix == NCP_cTCPOutputStart)
 				ix = 0;
 		} while (ix != last_ix);
 
 		/* 次回は、処理した通信端点を後回しにする。*/
 		last_ix = sel_ix;
 	}
-
 }
 
 /* #[<ENTRY_PORT>]# eTCPOutput
