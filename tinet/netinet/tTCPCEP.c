@@ -236,11 +236,17 @@
 
 /*
  *  関数
+ *
+ *	TODO: 関数名の先頭に tecs_ を使う
  */
 
-static void tcp_output(CELLCB *p_cellcb);
+static void tecs_tcp_output (CELLCB *p_cellcb);
+static T_TCP_CEP *tecs_tcp_timers (CELLCB *p_cellcb, int_t tix);
+static T_TCP_CEP *tecs_tcp_close (CELLCB *p_cellcb);
+static T_TCP_CEP *tecs_tcp_drop (CELLCB *p_cellcb, ER errno);
+static void tecs_tcp_set_persist_timer (CELLCB *p_cellcb);
 
-static ER send_segment(CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, uint_t len, uint8_t flags);
+static ER tecs_send_segment(CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, uint_t len, uint8_t flags);
 
 /*
  *  変数
@@ -261,6 +267,21 @@ const static uint8_t tcp_outflags[] = {
 	TCP_FLG_ACK,				/*  9, 終了、FIN 伝達確認受信、FIN待ち	*/
 	TCP_FLG_ACK,				/* 10, 終了、時間待ち					*/
 };
+
+/*
+ *  バックオフ時間
+ *
+ *  再送を行うたびに、タイムアウトの時間を延長する。
+ */
+
+const static uint8_t tcp_back_off[] = {
+	UINT_C(1), 		UINT_C(2), 		UINT_C(4), 		UINT_C(8),
+	UINT_C(16), 	UINT_C(32), 	UINT_C(64), 	UINT_C(64),
+	UINT_C(64), 	UINT_C(64), 	UINT_C(64), 	UINT_C(64),
+	UINT_C(64)
+};
+
+#define TCP_TOTAL_BACK_OFF	511	/* バックオフ時間の合計 */
 
 
 /* 受け口関数 #_TEPF_# */
@@ -375,11 +396,11 @@ eTCPOutputStart_outputStart(CELLIDX idx)
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
 
-		tcp_output( p_cellcb );
+		tecs_tcp_output( p_cellcb );
 
 		if (VAR_flags & TCP_CEP_FLG_CLOSE_AFTER_OUTPUT) {
 			/* コネクションを閉じる。*/
-			tcp_close( p_cellcb );
+			tecs_tcp_close( p_cellcb );
 			VAR_flags &= ~TCP_CEP_FLG_CLOSE_AFTER_OUTPUT;
 		}
 
@@ -399,6 +420,10 @@ eTCPOutputStart_outputStart(CELLIDX idx)
  * global_name:  tTCPCEP_eTCPOutputStart_timerFunction
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  tcp_slow_timo -- 500 [ms] 毎に呼出される TCP タイムアウト関数
+ */
+
 ER
 eTCPOutputStart_timerFunction(CELLIDX idx)
 {
@@ -412,6 +437,22 @@ eTCPOutputStart_timerFunction(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	T_TCP_CEP	*cep = &VAR_cep;
+	int_t		tix;
+
+	if (!(VAR_cep.fsm_state == TCP_FSM_CLOSED || VAR_cep.fsm_state == TCP_FSM_LISTEN)) {
+		for (tix = NUM_TCP_TIMERS; cep != NULL && tix -- > 0; ) {
+			if (VAR_cep.timer[tix] != 0 && -- VAR_cep.timer[tix] == 0) {
+				cep = tecs_tcp_timers(p_cellcb, tix);
+			}
+		}
+		if (cep != NULL) {
+			VAR_cep.idle ++;
+			if (VAR_cep.rtt) {
+				VAR_cep.rtt ++;
+			}
+		}
+	}
 
 	return(ercd);
 }
@@ -677,11 +718,11 @@ eInitializeRoutineBody_main(CELLIDX idx)
  * #[</POSTAMBLE>]#*/
 
 /*
- *  tcp_output -- TCP 出力処理
+ *  tecs_tcp_output -- TCP 出力処理
  */
 
 static void
-tcp_output (CELLCB *p_cellcb)
+tecs_tcp_output (CELLCB *p_cellcb)
 {
 	bool_t	sendalot = true, idle;
 	ER	error = E_OK;
@@ -829,7 +870,7 @@ tcp_output (CELLCB *p_cellcb)
 				VAR_cep.rxtshift = 0;
 				VAR_cep.snd_nxt  = VAR_cep.snd_una;
 				if (VAR_cep.timer[TCP_TIM_PERSIST] == 0)
-					tcp_set_persist_timer( p_cellcb );
+					tecs_tcp_set_persist_timer( p_cellcb );
 			}
 		}
 
@@ -886,7 +927,7 @@ tcp_output (CELLCB *p_cellcb)
 			 *  一致するときは送信する。
 			 */
 			if (len == VAR_cep.maxseg) {
-				error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
 
@@ -897,7 +938,7 @@ tcp_output (CELLCB *p_cellcb)
 			if ((idle || (VAR_flags & TCP_CEP_FLG_NO_DELAY)) &&
 			    (VAR_flags & TCP_CEP_FLG_NO_PUSH) == 0 &&
 			    len + doff >= VAR_cep.swbuf_count) {
-				error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
 
@@ -917,7 +958,7 @@ tcp_output (CELLCB *p_cellcb)
 			if ((VAR_flags & TCP_CEP_FLG_FORCE) ||
 			    (len >= VAR_cep.max_sndwnd / 2 && VAR_cep.max_sndwnd > 0) ||
 			    SEQ_LT(VAR_cep.snd_nxt, VAR_cep.snd_max)) {
-				error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
 		}
@@ -946,7 +987,7 @@ tcp_output (CELLCB *p_cellcb)
 
 			if (adv     >= (long)(VAR_cep.maxseg * 2) ||
 			    adv * 2 >= (long) VAR_rbufSize) {
-				error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
 		}
@@ -955,20 +996,20 @@ tcp_output (CELLCB *p_cellcb)
 		 *  ACK を送信する。
 		 */
 		if (VAR_flags & TCP_CEP_FLG_ACK_NOW) {
-			error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
 
 		if ( (flags & TCP_FLG_RST) ||
 		    ((flags & TCP_FLG_SYN) && (VAR_flags & TCP_CEP_FLG_NEED_SYN) == 0)) {
-			error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
 
 #ifdef TCP_CFG_EXTENTIONS
 
 		if (SEQ_GT(VAR_cep.snd_up, VAR_cep.snd_una)) {
-			error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
 
@@ -984,7 +1025,7 @@ tcp_output (CELLCB *p_cellcb)
 		 */
 		if ((flags & TCP_FLG_FIN) &&
 		    ((VAR_flags & TCP_CEP_FLG_SENT_FIN) == 0 || VAR_cep.snd_nxt == VAR_cep.snd_una)) {
-			error = send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
 
@@ -995,7 +1036,7 @@ tcp_output (CELLCB *p_cellcb)
 		if (VAR_cep.swbuf_count && VAR_cep.timer[TCP_TIM_REXMT	] == 0 &&
 		                           VAR_cep.timer[TCP_TIM_PERSIST] == 0) {
 			VAR_cep.rxtshift = 0;
-			tcp_set_persist_timer( p_cellcb );
+			tecs_tcp_set_persist_timer( p_cellcb );
 			break;
 		}
 
@@ -1003,27 +1044,223 @@ tcp_output (CELLCB *p_cellcb)
 }
 
 /*
- *  tcp_close -- コネクションを開放する。
+ *  tecs_tcp_close -- コネクションを開放する。
  */
 
 static T_TCP_CEP *
-tcp_close (CELLCB *p_cellcb)
+tecs_tcp_close (CELLCB *p_cellcb)
 {}
 
 /*
- *  tcp_set_persist_timer -- 持続タイマの設定
+ *  tecs_tcp_drop -- TCP 接続を破棄する。
+ */
+
+static T_TCP_CEP *
+tecs_tcp_drop (CELLCB *p_cellcb, ER errno)
+{}
+
+/*
+ *  tecs_tcp_set_persist_timer -- 持続タイマの設定
  */
 
 static void
-tcp_set_persist_timer (CELLCB *p_cellcb)
+tecs_tcp_set_persist_timer (CELLCB *p_cellcb)
 {}
 
 /*
- *  send_segment -- TCP 出力処理
+ *  tecs_tcp_timers -- タイムアウト処理
+ */
+
+static T_TCP_CEP *
+tecs_tcp_timers (CELLCB *p_cellcb, int_t tix)
+{
+	uint16_t 	win;
+	T_TCP_CEP 	*cep = &VAR_cep;
+
+	switch (tix) {
+
+	/*
+	 *  再送タイマ
+	 */
+	case TCP_TIM_REXMT:
+
+		/*
+		 *  最大再送回数 (TCP_MAX_REXMT_SHIFT、標準 12 回) になったときは、
+		 *  コネクションを切断する。
+		 */
+		if (++ VAR_cep.rxtshift > TCP_MAX_REXMT_SHIFT) {
+			VAR_cep.rxtshift  = TCP_MAX_REXMT_SHIFT;
+			VAR_cep.net_error = EV_REXMTMO;
+			cep = tecs_tcp_drop(p_cellcb, E_CLS);
+			break;
+		}
+
+		/*
+		 *  再送タイムアウトを計算する。
+		 */
+		VAR_cep.rxtcur = cTCPFunctions_tcpRangeSet((T_TCP_TIME)(tcp_rexmt_val(p_cellcb) * tcp_back_off[VAR_cep.rxtshift]),
+		                            			   (T_TCP_TIME)TCP_TVAL_MIN,
+		                            			   (T_TCP_TIME)TCP_TVAL_MAX_REXMT);
+		VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
+
+		/*
+		 *  srtt:   平滑化された RTT
+		 *  rttvar: 平滑化された分散
+		 *
+		 *  再送回数が最大再送回数の 1/4 になったときは、
+		 *  平滑化された分散 (rttvar) に srtt を加算し、
+		 *  平滑化された RTT を 0 にする。
+		 *
+		 */
+		if (VAR_cep.rxtshift > TCP_MAX_REXMT_SHIFT / 4) {
+			VAR_cep.rttvar += (VAR_cep.srtt >> TCP_SRTT_SHIFT);
+			VAR_cep.srtt    = 0;
+		}
+
+		/*
+		 *  snd_nxt: 次に送信する SEQ、この時点では、前回送信した SEQ
+		 *  snd_una: 未確認の最小送信 SEQ	 または、確認された最大送信 SEQ
+		 *
+		 *  前回送信した SEQ (snd_nxt) を
+		 *  確認された最大送信 SEQ (snd_una) まで戻す。
+		 */
+		VAR_cep.snd_nxt = VAR_cep.snd_una;
+		VAR_flags  |= TCP_CEP_FLG_ACK_NOW;
+
+		/*
+		 *  rtt: 往復時間の計測を中止する。
+		 */
+		VAR_cep.rtt     = 0;
+
+		/*
+		 *  送信ウインドの設定
+		 *
+		 *  snd_wnd:  相手の受信可能ウィンドサイズ
+		 *  snd_cwnd: 輻輳ウィンドサイズ
+		 *  maxseg  : 相手の最大受信セグメントサイズ
+		 *
+		 *  相手の受信可能ウィンドサイズ (snd_wnd) か、
+		 *  輻輳ウィンドサイズ (snd_cwnd) の
+		 *  どちらか小さいサイズの 1/2 を、更に
+		 *  相手の最大受信セグメントサイズ (maxseg) で割った値。
+		 *  ただし、2 以上
+		 */
+		if (VAR_cep.snd_wnd < VAR_cep.snd_cwnd)
+			win = VAR_cep.snd_wnd / 2 / VAR_cep.maxseg;
+		else
+			win = VAR_cep.snd_cwnd / 2 / VAR_cep.maxseg;
+
+		if (win < 2)
+			win = 2;
+
+		/*
+		 *  輻輳ウィンドサイズ (snd_cwnd) は
+		 *  相手の受信可能ウィンドサイズ (snd_wnd) に、
+		 *  輻輳ウィンドサイズのしきい値 (snd_ssthresh) は
+		 *  相手の受信可能ウィンドサイズ (snd_wnd) の win 倍に
+		 *  設定する。
+		 */
+		VAR_cep.snd_cwnd     = VAR_cep.maxseg;
+		VAR_cep.snd_ssthresh = win * VAR_cep.maxseg;
+		VAR_cep.dupacks      = 0;
+
+		/* 出力をポストする。*/
+		VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
+		sig_sem(SEM_TCP_POST_OUTPUT);
+		//TODO: cSemTcppost_signal();
+		break;
+
+	/*
+	 *  持続タイマ
+	 */
+	case TCP_TIM_PERSIST:
+
+		/*
+		 *  最大再送回数 (TCP_MAX_REXMT_SHIFT、標準 12 回) を超えていて、
+		 *  アイドル時間が、保留タイマの標準値 (TCP_TVAL_KEEP_IDLE、
+		 *  標準 2 * 60 * 60 秒) 以上か、
+		 *  再送タイムアウト値 * バックオフ時間の合計以上なら
+		 *  コネクションを切断する。
+		 */
+		if (VAR_cep.rxtshift > TCP_MAX_REXMT_SHIFT &&
+		    (VAR_cep.idle >= TCP_TVAL_KEEP_IDLE ||
+		     VAR_cep.idle >= tcp_rexmt_val(cep) * TCP_TOTAL_BACK_OFF)) {
+			VAR_cep.net_error = EV_REXMTMO;
+			cep = tecs_tcp_drop(p_cellcb, E_CLS);
+			break;
+		}
+
+		/* 持続タイマを再設定し、出力をポストする。*/
+		tecs_tcp_set_persist_timer(p_cellcb);
+
+		VAR_flags |= TCP_CEP_FLG_FORCE | TCP_CEP_FLG_FORCE_CLEAR | TCP_CEP_FLG_POST_OUTPUT;
+		sig_sem(SEM_TCP_POST_OUTPUT);
+		//TODO: cSemTcppost_signal();
+		break;
+
+	/*
+	 *  保留 (keep alive) タイマ
+	 */
+	case TCP_TIM_KEEP:
+
+		/*
+		 *  コネクションが開設されるまでにタイムアウトしたら
+		 *  コネクションの開設を中止する。
+		 */
+		if (VAR_cep.fsm_state < TCP_FSM_ESTABLISHED) {
+			VAR_cep.net_error = EV_REXMTMO;
+			cep = tecs_tcp_drop(p_cellcb, E_CLS);
+			break;
+		}
+
+#ifdef TCP_CFG_ALWAYS_KEEP
+
+		else if (VAR_cep.fsm_state < TCP_FSM_CLOSING) {
+			if (VAR_cep.idle >= TCP_TVAL_KEEP_IDLE +
+			                 TCP_TVAL_KEEP_COUNT * TCP_TVAL_KEEP_INTERVAL) {
+				VAR_cep.net_error = EV_REXMTMO;
+				cep = tecs_tcp_drop(p_cellcb, E_CLS);
+				break;
+			}
+			else {
+				int32_t size;
+				cTCPOutput_respond(NULL, size, &VAR_cep, VAR_cep.rcv_nxt, VAR_cep.snd_una - 1, VAR_rbufSize - VAR_cep.rwbuf_count, 0);
+			}
+			VAR_cep.timer[TCP_TIM_KEEP] = TCP_TVAL_KEEP_INTERVAL;
+		}
+		else
+			VAR_cep.timer[TCP_TIM_KEEP] = TCP_TVAL_KEEP_IDLE;
+
+#else	/* of #ifdef TCP_CFG_ALWAYS_KEEP */
+
+		VAR_cep.timer[TCP_TIM_KEEP] = TCP_TVAL_KEEP_IDLE;
+
+#endif	/* of #ifdef TCP_CFG_ALWAYS_KEEP */
+
+		break;
+
+	/*
+	 *  2MSL タイマ
+	 */
+	case TCP_TIM_2MSL:
+
+		if (VAR_cep.fsm_state != TCP_FSM_TIME_WAIT &&
+		    VAR_cep.idle  <= TCP_TVAL_KEEP_COUNT * TCP_TVAL_KEEP_INTERVAL)
+			VAR_cep.timer[TCP_TIM_2MSL] = TCP_TVAL_KEEP_INTERVAL;
+		else
+			cep = tecs_tcp_close(p_cellcb);
+		break;
+	}
+
+	return cep;
+}
+
+/*
+ *  tecs_send_segment -- TCP 出力処理
  */
 
 static ER
-send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, uint_t len, uint8_t flags)
+tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, uint_t len, uint8_t flags)
 {
 	T_NET_BUF	*output;
 	T_TCP_HDR	*tcph;
@@ -1362,7 +1599,7 @@ send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, uint_
 
 #ifdef TCP_CFG_TRACE
 
-	//?? tcp_output_trace(output, cep);
+	//?? tecs_tcp_output_trace(output, cep);
 
 #endif	/* of #ifdef TCP_CFG_TRACE */
 
