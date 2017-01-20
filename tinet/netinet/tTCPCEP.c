@@ -468,6 +468,11 @@ eTCPOutputStart_timerFunction(CELLIDX idx)
  * global_name:  tTCPCEP_eCEPInput_check
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  tcp_find_cep -- ポート番号から TCP 通信端点を得る。
+ * 	(おそらくこの関数の一部)
+ */
+
 ER
 eCEPInput_check(CELLIDX idx, const int8_t* dstaddr, const int8_t* srcaddr, int32_t len, uint16_t dstport, uint16_t srcport)
 {
@@ -481,8 +486,44 @@ eCEPInput_check(CELLIDX idx, const int8_t* dstaddr, const int8_t* srcaddr, int32
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	/* このコンポーネントではv4かv6かわからない */
+	if (ATTR_ipLength == len) {
+		/*
+		 *  状態が SYN 送信済み以後は、
+		 *  IP アドレスとポート番号が一致する通信端点を探索する。
+		 */
+		if (VAR_cep.fsm_state >= TCP_FSM_SYN_SENT &&
+		  	dstport == VAR_myport &&
+			srcport == VAR_dstport){
+			/* v4パケットの処理　*/
+			if (ATTR_ipLength == 4) {
+				if (*((T_IN4_ADDR *)srcaddr) == (*(T_IN4_ADDR *)cGetAddress_getDstAddress())) {
+					T_IN4_ADDR myaddr = *(T_IN4_ADDR *)cGetAddress_getMyAddress();
+					if ((myaddr == IPV4_ADDRANY) && (*(T_IN4_ADDR *)dstaddr == cTCPOutput_getIPv4Address()))
+						return E_OK;
+					else
+					  	if ((*(T_IN4_ADDR *)dstaddr == myaddr))
+							return E_OK;
+				}
+			}
+		}
 
-	return(ercd);
+		/* 受動オープン中の場合の処理。*/
+		if (VAR_cep.fsm_state == TCP_FSM_LISTEN &&
+			dstport == VAR_myport) {
+			/* v4パケットの処理　*/
+			if (ATTR_ipLength == 4) {
+				T_IN4_ADDR myaddr = *(T_IN4_ADDR *)cGetAddress_getMyAddress();
+				if ((myaddr == IPV4_ADDRANY) && (*(T_IN4_ADDR *)dstaddr == cTCPOutput_getIPv4Address()))
+					return E_OK;
+				else
+					if((*(T_IN4_ADDR *)dstaddr == myaddr))
+						return E_OK;
+			}
+		}
+	}
+
+	return E_ID;
 }
 
 /* #[<ENTRY_FUNC>]# eCEPInput_input
