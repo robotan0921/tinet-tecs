@@ -234,6 +234,54 @@
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 
+//TODO:
+/* 動的結合 */
+//本当はカーネルの機能に組み込むがmikan
+
+extern ER		get_inf(intptr_t *p_exinf);
+
+typedef struct tag_tTask_VCB {
+    /* call port #_TCP_# */
+    intptr_t cBody;
+    intptr_t cExceptionBody;
+    /* call port #_NEP_# */
+    /* attribute #_AT_# */
+    ID             id;
+    intptr_t       sTask_DES;
+    intptr_t       siTask_DES;
+}  tTask_VCB;
+
+static struct tag_sTask_VDES*
+get_tTask_DES()
+{
+	intptr_t inf;
+	tTask_VCB *vcb;
+
+	get_inf(&inf);
+	vcb = (tTask_VCB*)inf;
+
+	return (struct tag_sTask_VDES*)(vcb->sTask_DES);
+}
+
+
+#define tTCPCEP_cCallingSendTask_bind(p_that) \
+  (p_that)->cCallingSendTask = get_tTask_DES()
+#define cCallingSendTask_bind() tTCPCEP_cCallingSendTask_bind(p_cellcb)
+
+#define tTCPCEP_cCallingReceiveTask_bind(p_that) \
+  (p_that)->cCallingReceiveTask = get_tTask_DES()
+#define cCallingReceiveTask_bind() tTCPCEP_cCallingReceiveTask_bind(p_cellcb)
+//mikanここまで
+
+#define sREP4_entrypoint intptr_t//シグニチャ用につけられる
+#define sREP4_cREP4_bind(des) ((p_cellcb)->cREP4 = (struct tag_sREP4_VDES *)(des))
+#define sREP4_cREP4_unbind() ((p_cellcb)->cREP4 = NULL)
+#define sTask_cCallingSendTask_bind(des) ((p_cellcb)->cCallingSendTask = (struct tag_sTask_VDES *)(des))
+#define sTask_cCallingSendTask_unbind() ((p_cellcb)->cCallingSendTask = NULL)
+#define sTask_cCallingReceiveTask_bind(des) ((p_cellcb)->cCallingReceiveTask = (struct tag_sTask_VDES *)(des))
+#define sTask_cCallingReceiveTask_unbind() ((p_cellcb)->cCallingReceiveTask = NULL)
+/* dynamic conecction */
+
 /*
  *  関数
  *
@@ -243,6 +291,7 @@
 static void tecs_tcp_output (CELLCB *p_cellcb);
 static T_TCP_CEP *tecs_tcp_timers (CELLCB *p_cellcb, int_t tix);
 static T_TCP_CEP *tecs_tcp_close (CELLCB *p_cellcb);
+static void tecs_tcp_free_reassq (CELLCB *p_cellcb);
 static T_TCP_CEP *tecs_tcp_drop (CELLCB *p_cellcb, ER errno);
 static void tecs_tcp_set_persist_timer (CELLCB *p_cellcb);
 
@@ -1090,7 +1139,355 @@ tecs_tcp_output (CELLCB *p_cellcb)
 
 static T_TCP_CEP *
 tecs_tcp_close (CELLCB *p_cellcb)
-{}
+{
+	/* タイマーを停止する。*/
+	int_t ix;
+	for (ix = NUM_TCP_TIMERS; ix -- > 0; )
+		VAR_cep.timer[ix] = 0;
+
+	/*
+	 *  通信端点をロックし、
+	 *  受信再構成キューのネットワークバッファを解放する。
+	 */
+	cSemaphore_wait();
+	tcp_free_reassq( p_cellcb );
+	cSemaphore_signal();
+
+	/* 状態を未使用にする。*/
+	VAR_cep.fsm_state = TCP_FSM_CLOSED;
+
+	/*
+	 * 以下に関係しないフラグをクリアーする。
+	 * ・送受信ウィンドバッファの省コピー機能
+	 * ・動的な通信端点の生成・削除機能
+	 * ・通信端点のネットワーク層プロトコル
+	 */
+	//VAR_flags &= TCP_CEP_FLG_NOT_CLEAR;
+	VAR_flags &= (TCP_CEP_FLG_WBCS_NBUF_REQ | TCP_CEP_FLG_WBCS_MASK |
+	              TCP_CEP_FLG_DYNAMIC       | TCP_CEP_FLG_VALID);
+
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+	if (VAR_cep.snd_nblk_tfn != TFN_TCP_UNDEF || VAR_cep.rcv_nblk_tfn != TFN_TCP_UNDEF) {
+		/* ノンブロッキングコール */
+
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+
+		if (!IS_PTR_DEFINED(VAR_cep.callback))
+			syslog(LOG_WARNING, "[TCP] no call back, CEP: %d.", GET_TCP_CEPID(cep));
+		else {
+			if (VAR_cep.rcv_nblk_tfn != TFN_TCP_UNDEF) {
+				ER_UINT len;
+
+				switch (VAR_cep.rcv_nblk_tfn) {
+
+				case TFN_TCP_ACP_CEP:
+					/* TCP 通信端点からTCP 受付口を解放する。*/
+					//cep->rep = NULL;
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+					//cep->rep4 = NULL;
+#endif
+
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)E_CLS);
+					break;
+
+				case TFN_TCP_RCV_BUF:
+
+					/* 受信ウィンドバッファの空アドレスを獲得する。*/
+					len = TCP_GET_RWBUF_ADDR(VAR_cep, VAR_cep.rcv_p_buf);
+
+					/* 異常切断等のエラーを設定する。*/
+					if (VAR_cep.error == E_TMOUT)
+						len = E_CLS;
+					else if (VAR_cep.error < 0)
+						len = VAR_cep.error;
+
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)(uint32_t)len);
+					break;
+
+				case TFN_TCP_RCV_DAT:
+
+					/* 受信ウィンドバッファからデータを取り出す。*/
+					len = TCP_READ_RWBUF(VAR_cep, VAR_cep.rcv_data, (uint_t)VAR_cep.rcv_len);
+
+					/* 異常切断等のエラーを設定する。*/
+					if (VAR_cep.error == E_TMOUT)
+						len = E_CLS;
+					else if (VAR_cep.error != E_OK)
+						len = VAR_cep.error;
+
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)(uint32_t)len);
+					break;
+
+				case TFN_TCP_CLS_CEP:
+
+					if (VAR_cep.error == E_TMOUT)
+						(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)E_CLS);
+					else
+						(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)VAR_cep.error);
+					break;
+
+				default:
+					syslog(LOG_WARNING, "[TCP] unexp TFN: %s.", in_strtfn((FN)VAR_cep.rcv_nblk_tfn));
+					break;
+				}
+
+				/* 記憶されているタスク ID と API 機能コードをクリアーする。*/
+				VAR_cep.snd_tskid = TA_NULL;
+				VAR_cep.rcv_tskid = TA_NULL;
+				sTask_cCallingReceiveTask_unbind();
+				sTask_cCallingSendTask_unbind();
+				VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+				//TODO: CHECK!!
+				VAR_cep.rcv_nblk_tfn = TFN_TCP_UNDEF;
+				VAR_cep.rcv_tfn = TFN_TCP_UNDEF;
+			}
+
+			if (VAR_cep.snd_nblk_tfn != TFN_TCP_UNDEF) {
+
+				switch (VAR_cep.snd_nblk_tfn) {
+
+				case TFN_TCP_CON_CEP:
+					/* TCP 通信端点から TCP 受付口を解放する。*/
+					//cep->rep = NULL;
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+					//cep->rep4 = NULL;
+#endif
+
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.snd_nblk_tfn, (void*)E_CLS);
+					break;
+
+				case TFN_TCP_SND_DAT:
+				case TFN_TCP_GET_BUF:
+					if (VAR_cep.error == E_TMOUT)
+						(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.snd_nblk_tfn, (void*)E_CLS);
+					else
+						(*VAR_cep.callback)(GET_TCP_CEPID(vAR_cep), VAR_cep.snd_nblk_tfn, (void*)VAR_cep.error);
+					break;
+
+				default:
+					syslog(LOG_WARNING, "[TCP] unexp TFN: %s.", in_strtfn((FN)VAR_cep.snd_nblk_tfn));
+					break;
+				}
+
+				/* 記憶されているタスク ID と API 機能コードをクリアーする。*/
+				VAR_cep.snd_tskid = TA_NULL;
+				VAR_cep.rcv_tskid = TA_NULL;
+				sTask_cCallingReceiveTask_unbind();
+				sTask_cCallingSendTask_unbind();
+				VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+				//TODO: CHECK!!
+				VAR_cep.rcv_nblk_tfn = TFN_TCP_UNDEF;
+				VAR_cep.rcv_tfn = TFN_TCP_UNDEF;
+			}
+		}
+
+#else	/* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+		if (!IS_PTR_DEFINED(VAR_cep.callback))
+			syslog(LOG_WARNING, "[TCP] no call back, CEP: %d.", GET_TCP_CEPID(VAR_cep));
+		else {
+			if (VAR_cep.rcv_nblk_tfn != TFN_TCP_UNDEF) {
+				ER_UINT len;
+
+				switch (VAR_cep.rcv_nblk_tfn) {
+
+				case TFN_TCP_ACP_CEP:
+
+					/* TCP 通信端点からTCP 受付口を解放する。*/
+					//cep->rep = NULL;
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+					//cep->rep4 = NULL;
+#endif
+
+					/* 接続エラーを設定する。*/
+					len      = E_CLS;
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)&len);
+					break;
+
+				case TFN_TCP_RCV_BUF:
+
+					/* 受信ウィンドバッファの空アドレスを獲得する。*/
+					len = TCP_GET_RWBUF_ADDR(VAR_cep, VAR_cep.rcv_p_buf);
+
+					/* 異常切断等のエラーを設定する。*/
+					if (VAR_cep.error == E_TMOUT)
+						len = E_CLS;
+					else if (VAR_cep.error < 0)
+						len = VAR_cep.error;
+
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)&len);
+					break;
+
+				case TFN_TCP_RCV_DAT:
+
+					/* 受信ウィンドバッファからデータを取り出す。*/
+					len = TCP_READ_RWBUF(VAR_cep, VAR_cep.rcv_data, (uint_t)VAR_cep.rcv_len);
+
+					/* 異常切断等のエラーを設定する。*/
+					if (VAR_cep.error == E_TMOUT)
+						len = E_CLS;
+					else if (VAR_cep.error != E_OK)
+						len = VAR_cep.error;
+
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)&len);
+					break;
+
+				case TFN_TCP_CLS_CEP:
+					if (VAR_cep.error == E_TMOUT)
+						len = E_CLS;
+					else
+						len = VAR_cep.error;
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)&len);
+					break;
+
+				default:
+					syslog(LOG_WARNING, "[TCP] unexp TFN: %s.", in_strtfn((FN)VAR_cep.rcv_nblk_tfn));
+					break;
+				}
+
+				/* 記憶されているタスク ID と API 機能コードをクリアーする。*/
+				VAR_cep.snd_tskid = TA_NULL;
+				VAR_cep.rcv_tskid = TA_NULL;
+				sTask_cCallingReceiveTask_unbind();
+				sTask_cCallingSendTask_unbind();
+				VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+				//TODO: CHECK!!
+				VAR_cep.rcv_nblk_tfn = TFN_TCP_UNDEF;
+				VAR_cep.rcv_tfn = TFN_TCP_UNDEF;
+			}
+
+			if (VAR_cep.snd_nblk_tfn != TFN_TCP_UNDEF) {
+				ER_UINT len;
+
+				switch (VAR_cep.snd_nblk_tfn) {
+
+				case TFN_TCP_CON_CEP:
+
+					/* TCP 通信端点からTCP 受付口を解放する。*/
+					//cep->rep = NULL;
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+					//cep->rep4 = NULL;
+#endif
+
+					/* 接続エラーを設定する。*/
+					len      = E_CLS;
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.snd_nblk_tfn, (void*)&len);
+					break;
+
+				case TFN_TCP_SND_DAT:
+				case TFN_TCP_GET_BUF:
+					if (VAR_cep.error == E_TMOUT)
+						len = E_CLS;
+					else
+						len = VAR_cep.error;
+					(*VAR_cep.callback)(GET_TCP_CEPID(VAR_cep), VAR_cep.rcv_nblk_tfn, (void*)&len);
+					break;
+
+				default:
+					syslog(LOG_WARNING, "[TCP] unexp TFN: %s.", in_strtfn((FN)VAR_cep.snd_nblk_tfn));
+					break;
+				}
+
+				/* 記憶されているタスク ID と API 機能コードをクリアーする。*/
+				VAR_cep.snd_tskid = TA_NULL;
+				VAR_cep.rcv_tskid = TA_NULL;
+				sTask_cCallingReceiveTask_unbind();
+				sTask_cCallingSendTask_unbind();
+				VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+				//TODO: CHECK!!
+				VAR_cep.rcv_nblk_tfn = TFN_TCP_UNDEF;
+				VAR_cep.rcv_tfn = TFN_TCP_UNDEF;
+			}
+		}
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+		/*
+		 *  通信端点をロックし、
+		 *  送受信ウィンドバッファキューのネットワークバッファを解放する。
+		 */
+		cSemaphore_wait();
+		cCopySave_tcpFreeRwbufq(&VAR_cep);
+		cCopySave_tcpFreeSwbufq(&VAR_cep);
+		cSemaphore_signal();
+
+		/* 未使用になったことを知らせる。*/
+		cEstFlag_set(TCP_CEP_EVT_CLOSED);
+	}
+	else {	/* 非ノンブロッキングコール */
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif
+		/* 記憶されているタスク ID と API 機能コードをクリアーする。*/
+		VAR_cep.snd_tskid = TA_NULL;
+		VAR_cep.rcv_tskid = TA_NULL;
+		//TODO: sTask_cCallingReceiveTask_unbind();
+		//TODO: sTask_cCallingSendTask_unbind();
+		VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+		VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+
+		/*
+		 *  通信端点をロックし、
+		 *  送受信ウィンドバッファキューのネットワークバッファを解放する。
+		 */
+		cSemaphore_wait();
+		cCopySave_tcpFreeRwbufq(&VAR_cep);
+		cCopySave_tcpFreeSwbufq(&VAR_cep);
+		cSemaphore_signal();
+
+		/* 未使用になったことを知らせる。*/
+		cEstFlag_set(TCP_CEP_EVT_CLOSED);
+
+		/*
+		 * 入出力タスクを起床して、
+		 * 送受信不可になったことを知らせる。
+		 */
+		//TODO: CHECK!! syscall(set_flg(cep->snd_flgid, TCP_CEP_EVT_SWBUF_READY));
+		//TODO: CHECK!! syscall(set_flg(cep->rcv_flgid, TCP_CEP_EVT_RWBUF_READY));
+		cSendFlag_set(TCP_CEP_EVT_SWBUF_READY);
+		cRcvFlag_set(TCP_CEP_EVT_RWBUF_READY);
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+	}
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif
+	return NULL;
+}
+
+/*
+ *  tcp_free_reassq -- 受信再構成キューのネットワークバッファを解放する。
+ *
+ *    注意:
+ *      必要であれば、この関数を呼び出す前に、通信端点をロックし、
+ *      戻った後、解除する必要がある。
+ */
+
+static void
+tecs_tcp_free_reassq (CELLCB *p_cellcb)
+{
+	T_NET_BUF	*q, *nq;
+	//TODO: T_TCP_IP4_Q_HDR *ip4qhdr;
+	T_IP4_TCP_Q_HDR *ip4qhdr;
+
+	if (VAR_offset.protocolflag & FLAG_USE_IPV4) {
+		for (q = VAR_cep.reassq; q != NULL; q = nq) {
+			//TODO: ip4qhdr = ((T_TCP_IP_Q_HDR*)GET_IP4_HDR(q,q->off.ifhdrlen));
+			ip4qhdr = ((T_IP4_TCP_Q_HDR*)GET_IP4_HDR(q));
+			// nq = GET_TCP_Q_HDR(q, ip4qhdr->thoff)->next;
+			eInput_input_inputp_dealloc(q);
+		}
+	}
+	VAR_cep.reassq  = NULL;
+}
+
 
 /*
  *  tecs_tcp_drop -- TCP 接続を破棄する。

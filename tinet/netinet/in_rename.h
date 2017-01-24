@@ -51,7 +51,7 @@
 #define tcp_slow_timo		_tinet_tcp_slow_timo
 #define tcp_fast_timo		_tinet_tcp_fast_timo
 #define tcp_range_set		_tinet_tcp_range_set
-//#define tcp_set_persist_timer	_tinet_tcp_set_persist_timer
+#define tcp_set_persist_timer	_tinet_tcp_set_persist_timer
 
 /* netinet/tcp_usrrq.c */
 
@@ -62,8 +62,8 @@
 #define tcp_iss			_tinet_tcp_iss
 #define tcp_init		_tinet_tcp_init
 #define tcp_init_iss		_tinet_tcp_init_iss
-//#define tcp_close		_tinet_tcp_close
-//#define tcp_drop		_tinet_tcp_drop
+#define tcp_close		_tinet_tcp_close
+#define tcp_drop		_tinet_tcp_drop
 #define tcp_respond		_tinet_tcp_respond
 #define	tcp_get_segment		_tinet_tcp_get_segment
 #define tcp_rexmt_val		_tinet_tcp_rexmt_val
