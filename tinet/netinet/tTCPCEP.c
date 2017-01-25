@@ -302,6 +302,7 @@ get_tTask_DES()
 
 static void 	 tecs_tcp_output (CELLCB *p_cellcb);
 static T_TCP_CEP *tecs_tcp_timers (CELLCB *p_cellcb, int_t tix);
+static ER 		 tecs_tcp_wait_rwbuf (CELLCB *p_cellcb, TMO tmout);
 static uint8_t 	 tecs_tcp_move_ra2rw (CELLCB *p_cellcb, uint8_t flags);
 static uint8_t 	 tecs_tcp_write_raque (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t flags);
 static T_TCP_TIME tecs_tcp_rexmt_val (CELLCB *p_cellcb);
@@ -1569,6 +1570,9 @@ err_ret:
  * global_name:  tTCPCEP_eAPI_receive
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  tcp_rcv_dat -- パケットの受信【標準機能】
+ */
 ER_UINT
 eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 {
@@ -1582,8 +1586,89 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	ER_UINT		error;
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
 
-	return(ercd);
+	/* data が NULL か、len < 0 ならエラー */
+	if (data == NULL || len < 0)
+		return E_PAR;
+
+#else	/* of #ifdef TCP_CFG_NON_BLOCKING */
+
+	/* data が NULL、len < 0 か、tmout が TMO_NBLK ならエラー */
+	if (data == NULL || len < 0 || tmout == TMO_NBLK)
+		return E_PAR;
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+	/*
+	 *  CEP をロックし、API 機能コードとタスク識別子を記録する。
+	 *  すでに記録されていれば、ペンディング中なのでエラー
+	 */
+	if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_RCV_DAT)) != E_OK)
+		return error;
+
+	/* 受信できるか、通信端点の状態を見る。*/
+	if (tecs_tcp_can_recv_more(&error, p_cellcb, TFN_TCP_RCV_DAT, tmout) != E_OK)
+		goto err_ret;
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+	/* タイムアウトをチェックする。*/
+	if (tmout == TMO_NBLK) {		/* ノンブロッキングコール */
+
+		/* 受信ウィンドバッファにデータがあればコールバック関数を呼び出す。*/
+		if (cep->rwbuf_count > 0) {
+
+			/* 受信ウィンドバッファからデータを取り出す。*/
+			len = TCP_READ_RWBUF(cep, data, (uint_t)len);
+
+			/* コールバック関数を呼び出す。*/
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+			(*cep->callback)(GET_TCP_CEPID(cep), TFN_TCP_RCV_DAT, (void*)(uint32_t)len);
+#else
+			(*cep->callback)(GET_TCP_CEPID(cep), TFN_TCP_RCV_DAT, (void*)&len);
+#endif
+			error = E_WBLK;
+			goto err_ret;
+			}
+		else {
+			cep->rcv_data     = data;
+			cep->rcv_len      = len;
+			cep->rcv_nblk_tfn = TFN_TCP_RCV_DAT;
+			return E_WBLK;
+			}
+		}
+	else {		/* 非ノンブロッキングコール */
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+		/* 受信ウィンドバッファにデータがなければ、入力があるまで待つ。*/
+		if ((error = tecs_tcp_wait_rwbuf(p_cellcb, tmout)) != E_OK)
+			goto err_ret;
+
+		/* 受信ウィンドバッファからデータを取り出す。*/
+		error = cCopySave_tcpReadRwbuf(&VAR_cep, data, len, VAR_rbuf, VAR_rbufSize);
+
+		/* 相手にウィンドウサイズが変わったことを知らせるため出力をポストする。*/
+		VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
+		cSemaphoreTcppost_signal();
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+		}
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+err_ret:
+	VAR_cep.rcv_tskid = TA_NULL;
+	sTask_cCallingReceiveTask_unbind();
+	VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+	return error;
 }
 
 /* #[<ENTRY_FUNC>]# eAPI_cancel
@@ -2549,6 +2634,50 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 static void
 tecs_tcp_set_persist_timer (CELLCB *p_cellcb)
 {}
+
+/*
+ *  tecs_tcp_wait_rwbuf -- 受信ウィンドバッファにデータが入るのを待つ。
+ */
+
+static ER
+tecs_tcp_wait_rwbuf (CELLCB *p_cellcb, TMO tmout)
+{
+	ER	error;
+	FLGPTN	flag;
+
+	if (VAR_cep.rwbuf_count == 0) {
+		/* 受信ウィンドバッファにデータがなければ、入力があるまで待つ。*/
+		while (VAR_cep.rwbuf_count == 0) {
+			if ((error = cRcvFlag_waitTimeout(TCP_CEP_EVT_RWBUF_READY, TWF_ORW, &flag, tmout)) != E_OK) {
+				return error;
+				}
+			cRcvFlag_clear((FLGPTN)(~TCP_CEP_EVT_RWBUF_READY));
+
+			/*
+			 *  受信できるか、fsm_state を見る。受信できない状態で、
+			 *  受信ウィンドバッファに文字がない場合は終了する。
+			 */
+			if (!TCP_FSM_CAN_RECV_MORE(VAR_cep.fsm_state) &&
+			    VAR_cep.rwbuf_count == 0 && VAR_cep.reassq == NULL) {
+
+				/*
+				 *  通信端点をロックして、
+				 *  受信ウィンドバッファキューのネットワークバッファを解放する。
+				 */
+				cSemaphore_wait();
+				cCopySave_tcpFreeRwbufq(&VAR_cep);
+				cSemaphore_signal();
+
+				return VAR_cep.error;
+			}
+		}
+	}
+	else {
+		cRcvFlag_clear((FLGPTN)(~TCP_CEP_EVT_RWBUF_READY));
+	}
+
+	return E_OK;
+}
 
 /*
  *  tecs_tcp_move_ra2rw -- 受信再構成キューで再構成したセグメントを受信ウィンドバッファに書き込む。
