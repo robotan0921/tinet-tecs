@@ -1102,6 +1102,9 @@ drop:
  * global_name:  tTCPCEP_eCEPInput_notify
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  tcp_notify -- ICMP エラーの処理
+ */
 void
 eCEPInput_notify(CELLIDX idx, ER error)
 {
@@ -1114,7 +1117,29 @@ eCEPInput_notify(CELLIDX idx, ER error)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	/*
+	 *  コネクション開設済で、ホスト到達不能エラーの場合は、
+	 *  再送により処理する。
+	 */
+	if (VAR_cep.fsm_state == TCP_FSM_ESTABLISHED &&
+	    (error == EV_NURCH || error == EV_HURCH || error == EV_HDOWN))
+		return;
 
+	/*
+	 *  コネクション開設中、同じエラーを何度か受信した場合は、
+	 *  待ち状態を解除し、対応する関数にエラーを返させる。
+	 */
+	if (VAR_cep.fsm_state < TCP_FSM_ESTABLISHED && VAR_cep.rxtshift > 3 && VAR_cep.net_error != E_OK) {
+		VAR_cep.error = E_CLS;
+		tecs_tcp_close(p_cellcb);
+	}
+	else {
+		VAR_cep.net_error = error;
+
+		/* 送信を指示する。*/
+		VAR_flags |=  TCP_CEP_FLG_POST_OUTPUT;
+		cSemaphoreTcppost_signal();
+	}
 }
 
 /* #[<ENTRY_PORT>]# eAPI
