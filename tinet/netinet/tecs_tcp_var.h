@@ -217,5 +217,18 @@ typedef struct t_tcp_cep {
 #define TCP_CEP_FLG_WBCS_SENT		ULONG_C(0x60000000)	/* 送信済みで、ACK待ち		*/
 #define TCP_CEP_FLG_WBCS_ACKED		ULONG_C(0x70000000)	/* 送信済みで、ACK完了		*/
 
+/*
+ *  戻り値
+ *
+ *  RET_OK			正常
+ *	RET_DROP		エラー、セグメントを破棄する。
+ *	RET_RST_DROP	エラー、RST を送信し、セグメントを破棄する。
+ */
+
+#define RET_OK			(0)
+#define RET_NEED_OUTPUT	(1)
+#define RET_RETURN		(2)
+#define RET_DROP		(-1)
+#define RET_RST_DROP	(-2)
 
 #endif	/* of #ifndef _TECS_TCP_VAR_H_ */

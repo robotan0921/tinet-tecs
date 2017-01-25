@@ -133,17 +133,13 @@
 uint32_t
 eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_t* srcaddr, int32_t addrlen)
 {
+	ER 			error;
 	T_NET_BUF	*input = (T_NET_BUF*)inputp;
 	T_TCP_HDR	*tcph;
-	T_TCP_CEP	*cep = NULL;
-	T_TCP_SEQ	iss = 0;
-	ER		ret;
-	bool_t		needoutput = false;
 	int32_t		rbfree;
-	int32_t		todrop, win;
 	uint16_t	seglen;
-	uint8_t		flags;
 	int32_t 	offset;
+	uint32_t 	ix;
 	uint_t 		*offp = size;
 
 #if defined(NUM_TCP_TW_CEP_ENTRY) && NUM_TCP_TW_CEP_ENTRY > 0
@@ -216,10 +212,20 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	NTOHS(tcph->sport);
 	NTOHS(tcph->dport);
 
-	/* TODO: find_cep:以下はおそらく tTCPCEP の eInput_input で実装している */
-	//TODO: cCEPInput_input(..,..);
+	/* TCPCEPのファインド */
+	for (ix = 0; ix < N_CP_cCEPInput; ix++) {
+		if (cCEPInput_check(ix, dstaddr, srcaddr, addrlen, tcph->dport, tcph->sport) == E_OK) {
+			syslog(LOG_EMERG, "CEP FIND! seq :%d  ack:%d .", tcph->seq, tcph->ack);
+			error = cCEPInput_input(ix, inputp, size);
+			syslog(LOG_EMERG, "********success!*********");
+			return error;
+		}
+	}
 
-reset_drop:
+	/* CEPがなかった処理 */
+	syslog(LOG_EMERG, "CEP Lost... seq :%d  ack:%d .",tcph->seq,tcph->ack);
+
+//reset_drop:
 	/*
 	 *  RST 送信処理
 	 */
@@ -238,13 +244,13 @@ reset_drop:
 		//rbfree = cep->rbufsz - cep->rwbuf_count;
 
 	if (tcph->flags & TCP_FLG_ACK)
-		tcp_respond(input, cep, 0, tcph->ack, rbfree, TCP_FLG_RST);
-		//TODO: cTCPRespond_respond(inputp,size, NULL,0,tcph->ack,rbfree, TCP_FLG_RST);
+		//TODO: tcp_respond(input, cep, 0, tcph->ack, rbfree, TCP_FLG_RST);
+		cTCPRespond_respond(inputp, size, NULL, 0, tcph->ack, rbfree, TCP_FLG_RST);
 	else {
 		if (tcph->flags & TCP_FLG_SYN)
 			tcph->sum ++;		/* tcph->sum は SDU 長 */
-		tcp_respond(input, cep, tcph->seq + tcph->sum, 0, rbfree, TCP_FLG_RST | TCP_FLG_ACK);
-		//TODO: cTCPRespond_respond(inputp,size,NULL,tcph->seq + tcph->sum,0,rbfree, TCP_FLG_RST | TCP_FLG_ACK);
+		//TODO: tcp_respond(input, cep, tcph->seq + tcph->sum, 0, rbfree, TCP_FLG_RST | TCP_FLG_ACK);
+		cTCPRespond_respond(inputp, size, NULL, tcph->seq + tcph->sum, 0, rbfree, TCP_FLG_RST | TCP_FLG_ACK);
 	}
 
 	/* input は tcp_respoond で返却される。*/
@@ -255,8 +261,7 @@ reset_drop:
 drop:
 	NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
 	NET_COUNT_MIB(tcp_stats.tcpInErrs, 1);
-	syscall(rel_net_buf(input));
-	//TODO: eInput_TCPInput_inputp_dealloc(inputp);
+	eInput_TCPInput_inputp_dealloc(inputp);
 	return IPPROTO_DONE;
 }
 
