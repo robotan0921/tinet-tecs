@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: generate.rb 2605 2016-10-16 14:09:37Z okuma-top $
+#   $Id: generate.rb 2614 2016-10-23 11:27:30Z okuma-top $
 #++
 
 def ifdef_macro_only f
@@ -1459,11 +1459,17 @@ EOT
         b_comment = true
       end
 
-      if p.get_array_size == nil then
-        f.print( "#define #{@global_name}_is_#{p.get_name}_joined(p_that) \\\n" )
+      if @singleton then
+        param = ""
+        delim = ""
       else
-        f.print( "#define #{@global_name}_is_#{p.get_name}_joined(p_that,subscript) \\\n" )
+        param = "p_that"
+        delim = ","
       end
+      if p.get_array_size != nil then
+        param = param + delim + "subscript"
+      end
+      f.print( "#define #{@global_name}_is_#{p.get_name}_joined(#{param}) \\\n" )
 
       if p.is_omit? then
         f.print( "   omit  is_#{p.get_name}_joined\n" )
@@ -1534,12 +1540,21 @@ EOT
         b_comment = true
       end
 
-      if p.get_array_size == nil then
-        f.print( "#define is_#{p.get_name}_joined()\\\n\t\t#{@global_name}_is_#{p.get_name}_joined(p_cellcb)\n" )
+      if @singleton then
+        param = ""
+        delim = ""
       else
-        f.print( "#define is_#{p.get_name}_joined(subscript)\\\n" )
-        f.print( "\t\t#{@global_name}_is_#{p.get_name}_joined(p_cellcb,subscript)\n" )
+        param = "p_cellcb"
+        delim = ","
       end
+
+      if p.get_array_size == nil then
+        subscript = ""
+      else
+        subscript = "subscript"
+        param = param + delim + subscript
+      end
+      f.print( "#define is_#{p.get_name}_joined(#{subscript})\\\n\t\t#{@global_name}_is_#{p.get_name}_joined(#{param})\n" )
     }
   end
 
@@ -1970,7 +1985,7 @@ EOT
         p_that = ""
         p_that2 = ""
         p_cellcb = ""
-        if p.get_array_size then
+        if p.get_array_size && $rom then
           cb = "#{@global_name}_SINGLE_CELL_INIB."
         else
           cb = "#{@global_name}_SINGLE_CELL_CB."
@@ -1983,7 +1998,7 @@ EOT
       end
 
       if p.get_array_size then
-        array = ", int_t  i "
+        array = "int_t  i, "
         array2 = "[ i ]"
         array3 = " int_t  i "
         assert2 = "    assert( 0 <= i && i < NCP_#{p.get_name} );\n"
@@ -1996,7 +2011,7 @@ EOT
       f.print <<EOT
 /* [dynamic] #{p.get_name} */
 Inline void
-#{@global_name}_#{p.get_name}_set_descriptor( #{p_that}Descriptor( #{p.get_signature.get_name} ) des#{array} )
+#{@global_name}_#{p.get_name}_set_descriptor( #{p_that}#{array}Descriptor( #{p.get_signature.get_name} ) des )
 {
 #{p_cellcb}    assert( des.vdes != NULL );
 #{assert2}    #{cb}#{p.get_name}#{array2} = des.vdes;
@@ -2203,7 +2218,7 @@ EOT
       next if ! p.is_dynamic?
 
       if p.get_array_size then
-        subsc = ", i"
+        subsc = "i, "
         subsc2 = "i"
         subsc3 = delim + subsc2
       else
@@ -2211,7 +2226,7 @@ EOT
         subsc2 = ""
         subsc3 = ""
       end
-      f.printf( "#define %s_set_descriptor( desc#{subsc} )\\\n          %s_set_descriptor( #{p_cellcb}#{delim}desc#{subsc} )\n",
+      f.printf( "#define %s_set_descriptor( #{subsc}desc )\\\n          %s_set_descriptor( #{p_cellcb}#{delim}#{subsc}desc )\n",
                 "#{p.get_name}",
                 "#{@global_name}_#{p.get_name}" )
       f.printf( "#define %s_unjoin( #{subsc2} )\\\n          %s_unjoin( #{p_cellcb}#{subsc3} )\n",
@@ -2693,7 +2708,8 @@ EOT
 #            pre = ""
 #            post = ""
           end
-          f.print "\tmemcpy((void*)#{pre}#{@global_name}_VAR_#{v.get_name}#{p_that}#{post}, (void*)#{pre}#{@global_name}_#{v.get_name}_VAR_INIT#{post}, sizeof(#{@global_name}_#{v.get_name}_VAR_INIT));"
+          f.print "\tmemcpy((void*)#{pre}#{@global_name}_VAR_#{v.get_name}#{p_that}#{post}, "
+          f.print "(void*)#{pre}#{@global_name}_#{v.get_name}_VAR_INIT#{post}, sizeof(#{@global_name}_#{v.get_name}_VAR_INIT));"
         elsif init.instance_of? C_EXP then
           f.print "\t#{that}#{v.get_name} = #{init.get_c_exp_string};"
         else
@@ -2720,6 +2736,11 @@ EOT
             else
               p_that = "(p_that)"
             end
+            if @singleton then
+              that = "#{@global_name}_SINGLE_CELL_INIB."
+            else
+              that = "(p_that)->"
+            end
             if has_CB? then
               init = '_init->'
             else
@@ -2728,7 +2749,7 @@ EOT
             f.printf( "\\\n%-80s\\\n", '     {' )
             f.printf( "%-80s\\\n", '        int_t   j;' )
             f.printf( "%-80s\\\n", "        for( j = 0; j < N_CP_#{p.get_name}#{p_that}; j++ ){" )
-            f.printf( "%-80s\\\n", "            p_that->#{p.get_name}[j] = p_that->#{init}#{p.get_name}_init_[j];" )
+            f.printf( "%-80s\\\n", "            #{that}#{p.get_name}[j] = #{that}#{init}#{p.get_name}_init_[j];" )
             f.printf( "%-80s\\\n", '        }' )
             f.printf( "%-80s", '       }' )
           end
@@ -3694,16 +3715,23 @@ EOT
 
         # debug
         if j == nil then
+          dbgPrint "cell_cb_call_port: #{p.get_name} array size=#{p.get_array_size}\n"
           # optional 呼び口
           # cdl_error( "H1003 internal error: cell \'$1\' port \'$2\': initializer not found\n" , cell.get_name, p.get_name )
           # exit( 1 )
           if p.get_array_size then
-            if inib_cb == :INIB && p.is_dynamic? && p.get_array_size != nil && $ram_initializer then
-              f.printf( "%-40s /* #_CCP3B_# _init_ */\n",  "#{cell.get_global_name}_#{p.get_name}_init_," )
-              print_indent( f, indent + 1 )
-              f.printf( "%-40s /* #_CCP3B_# */\n",  "#{cell.get_global_name}_#{p.get_name}," )
+            if p.is_dynamic? then
+              if inib_cb == :INIB then
+                if  $ram_initializer then
+                  f.printf( "%-40s /* #_CCP7_# _init_ */\n",  "#{cell.get_global_name}_#{p.get_name}_init_," )
+                  print_indent( f, indent + 1 )
+                end
+                f.printf( "%-40s /* #_CCP7B_# */\n",  "#{cell.get_global_name}_#{p.get_name}," )
+              elsif $rom == false then
+                f.printf( "%-40s /* #_CCP8_# */\n",  "#{cell.get_global_name}_#{p.get_name}," )
+              end
             else
-              f.printf( "%-40s /* #_CCP5_# */\n",  "0," )
+              f.printf( "%-40s /* #_CCP9_# */\n",  "0," )
             end
             if p.get_array_size == "[]" then
               # 添数省略の呼び口配列
@@ -3723,7 +3751,7 @@ EOT
             f.printf( "%-40s /* #_CCP3_# _init_ */\n",  "#{cell.get_global_name}_#{j.get_name}_init_," )
             print_indent( f, indent + 1 )
           end
-          f.printf( "%-40s /* #_CCP3_# */\n",  "#{cell.get_global_name}_#{j.get_name}," )
+          f.printf( "%-40s /* #_CCP3B_# */\n",  "#{cell.get_global_name}_#{j.get_name}," )
           if p.get_array_size == "[]" then
             # 添数省略の呼び口配列
             print_indent( f, indent + 1 )
@@ -3763,7 +3791,7 @@ EOT
                 f.printf( "%-40s /* %s #_CCP2_# */\n", "#{name_array[7]},", p.get_name )
               else
                 # 呼び先は CB も INIB も持たない（NULL に初期化）
-                f.printf( "%-40s /* %s #_CCP2_# */\n", "0,", p.get_name )
+                f.printf( "%-40s /* %s #_CCP2B_# */\n", "0,", p.get_name )
               end
             end
           end
@@ -4334,7 +4362,7 @@ EOT
                   "#{p.get_name}_ref_desc(#{subsc})      (same as above; abbreviated version)" )
       end
       if p.is_dynamic? then
-        subsc = p.get_array_size ? ', int_t subscript' : ''
+        subsc = p.get_array_size ? 'int_t subscript, ' : ''
         subsc2 = p.get_array_size ? ' int_t subscript' : ''
         if p.is_optional? then
           f.print " *   [dynamic, optional]\n"
@@ -4343,7 +4371,7 @@ EOT
         end
         f.printf( " *      %-14s %s;\n",
                   "void",
-                  "#{p.get_name}_set_descriptor( Descriptor( #{p.get_signature.get_name} ) desc#{subsc} )" )
+                  "#{p.get_name}_set_descriptor( #{subsc}Descriptor( #{p.get_signature.get_name} ) desc )" )
         if p.is_optional? then
           f.printf( " *      %-14s %s;\n",
                     "void",
