@@ -310,6 +310,8 @@ static ER 		 tecs_tcp_lock_cep (CELLCB *p_cellcb, FN tfn);
 static T_TCP_CEP *tecs_tcp_close (CELLCB *p_cellcb);
 static void 	 tecs_tcp_free_reassq (CELLCB *p_cellcb);
 static T_TCP_CEP *tecs_tcp_drop (CELLCB *p_cellcb, ER errno);
+static ER 		 tecs_tcp_can_send_more (CELLCB *p_cellcb, FN fncd, TMO tmout);
+static ER 		 tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout);
 static void 	 tecs_tcp_set_persist_timer (CELLCB *p_cellcb);
 
 static ER 		tecs_send_segment(CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, uint_t len, uint8_t flags);
@@ -1467,8 +1469,99 @@ eAPI_send(CELLIDX idx, const int8_t* data, int32_t len, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	ER_UINT		error;
 
-	return(ercd);
+#ifdef TCP_CFG_NON_BLOCKING
+
+	/* data が NULL か、len < 0 ならエラー */
+	if (data == NULL || len < 0)
+		return E_PAR;
+
+#else	/* of #ifdef TCP_CFG_NON_BLOCKING */
+
+	/* data が NULL、len < 0 か、tmout が TMO_NBLK ならエラー */
+	if (data == NULL || len < 0 || tmout == TMO_NBLK)
+		return E_PAR;
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+
+	/*
+	 *  CEP をロックし、API 機能コードとタスク識別子を記録する。
+	 *  すでに記録されていれば、ペンディング中なのでエラー
+	 */
+	if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_SND_DAT)) != E_OK)
+		return error;
+
+	/* 送信できるか、通信端点の状態を見る。*/
+	if ((error = tecs_tcp_can_send_more(p_cellcb, TFN_TCP_SND_DAT, tmout)) != E_OK)
+		goto err_ret;
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+	/* タイムアウトをチェックする。*/
+	if (tmout == TMO_NBLK) {		/* ノンブロッキングコール */
+
+		/* 送信ウィンドバッファに空きがあればコールバック関数を呼び出す。*/
+		if (!TCP_IS_SWBUF_FULL(cep)) {
+
+		 	/* 送信ウィンドバッファにデータを書き込む。*/
+			error = TCP_WRITE_SWBUF(cep, data, (uint_t)len);
+
+			/* 出力をポストする。*/
+			cep->flags |= TCP_CEP_FLG_POST_OUTPUT;
+			sig_sem(SEM_TCP_POST_OUTPUT);
+
+			/* コールバック関数を呼び出す。*/
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+			(*cep->callback)(GET_TCP_CEPID(cep), TFN_TCP_SND_DAT, (void*)error);
+#else
+			(*cep->callback)(GET_TCP_CEPID(cep), TFN_TCP_SND_DAT, (void*)&error);
+#endif
+			error = E_WBLK;
+			goto err_ret;
+			}
+		else {
+			cep->snd_data     = data;
+			cep->snd_len      = len;
+			cep->snd_nblk_tfn = TFN_TCP_SND_DAT;
+			TCP_ALLOC_SWBUF(cep);
+
+			return E_WBLK;
+			}
+		}
+	else {		/* 非ノンブロッキングコール */
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	//* of #if 0 */
+
+	 	/* 送信ウィンドバッファが空くのを待つ。*/
+		if ((error = cCopySave_tcpWaitSwbuf(&VAR_cep, &VAR_flags, VAR_sbufSize, tmout)) != E_OK)
+			goto err_ret;
+
+	 	/* 送信ウィンドバッファにデータを書き込む。*/
+		if ((error = cCopySave_tcpWriteSwbuf(&VAR_cep, data,len, VAR_sbuf, VAR_sbufSize)) > 0) {
+
+			/* データを送信する。送信ウィンドバッファがフルのときは強制的に送信する。*/
+			if (cCopySave_tcpIsSwbufFull(&VAR_cep, VAR_sbufSize))
+				VAR_flags |= TCP_CEP_FLG_FORCE | TCP_CEP_FLG_FORCE_CLEAR;
+
+			/* 出力をポストする。*/
+			VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
+			cSemaphoreTcppost_signal();
+		}
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+	}
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+err_ret:
+	VAR_cep.snd_tskid = TA_NULL;
+	sTask_cCallingSendTask_unbind();
+	VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
+	return error;
 }
 
 /* #[<ENTRY_FUNC>]# eAPI_receive
@@ -2277,6 +2370,177 @@ tecs_tcp_free_reassq (CELLCB *p_cellcb)
 static T_TCP_CEP *
 tecs_tcp_drop (CELLCB *p_cellcb, ER errno)
 {}
+
+/*
+ *  tecs_tcp_can_send_more -- 送信できるか、通信端点の状態を見る。
+ */
+
+static ER
+tecs_tcp_can_send_more (CELLCB *p_cellcb, FN fncd, TMO tmout)
+{
+	ER	error;
+
+	/* 送信できるか、CEP の FSM 状態を見る。*/
+	if (!TCP_FSM_CAN_SEND_MORE(VAR_cep.fsm_state)) {
+		if ((error = VAR_cep.error) == E_OK)
+			error = E_OBJ;
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+		/* タイムアウトをチェックする。*/
+		if (tmout == TMO_NBLK) {	/* ノンブロッキングコール */
+
+			if (!IS_PTR_DEFINED(cep->callback))
+				error = E_OBJ;
+			else {
+				/* コールバック関数を呼び出す。*/
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+				(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)error);
+#else
+				(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)&error);
+#endif
+				error = E_WBLK;
+				}
+			}
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+	}
+	else {
+
+#ifdef TCP_CFG_SWBUF_CSAVE
+
+		error = E_OK;
+
+#else	/* of #ifdef TCP_CFG_SWBUF_CSAVE */
+
+		if (!IS_PTR_DEFINED(VAR_sbuf)) {
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+			/* タイムアウトをチェックする。*/
+			if (tmout == TMO_NBLK) {	/* ノンブロッキングコール */
+				if (!IS_PTR_DEFINED(cep->callback))
+					error = E_OBJ;
+				else {
+					error = E_OBJ;
+
+					/* コールバック関数を呼び出す。*/
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+					(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)error);
+#else
+					(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)&error);
+#endif
+					error = E_WBLK;
+					}
+				}
+			else
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+			error = E_OBJ;
+		}
+		else
+			error = E_OK;
+
+#endif	/* of #ifdef TCP_CFG_SWBUF_CSAVE */
+
+	}
+
+	return error;
+}
+
+/*
+ *  tecs_tcp_can_recv_more -- 受信できるか、通信端点の状態を見る。
+ *
+ *  注意: 戻り値
+ *
+ *	E_OK	受信可能
+ *	E_OBJ	相手から切断されたか、エラーが発生した。
+ */
+
+static ER
+tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
+{
+	/*
+	 *  受信できるか、fsm_state を見る。受信できない場合は
+	 *  長さ 0、またはエラーを返す。
+	 */
+	if (!TCP_FSM_CAN_RECV_MORE(VAR_cep.fsm_state) &&
+	    VAR_cep.rwbuf_count == 0 && VAR_cep.reassq == NULL) {
+		*error = VAR_cep.error;
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+		/* タイムアウトをチェックする。*/
+		if (tmout == TMO_NBLK) {	/* ノンブロッキングコール */
+
+			if (!IS_PTR_DEFINED(cep->callback))
+				*error = E_OBJ;
+			else {
+				/* コールバック関数を呼び出す。*/
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+				(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)*error);
+#else
+				(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)error);
+#endif
+				*error = E_WBLK;
+				}
+			}
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+		/*
+		 *  通信端点をロックして、
+		 *  受信ウィンドバッファキューのネットワークバッファを解放する。
+		 */
+		cSemaphore_wait();
+		cCopySave_tcpFreeRwbufq(&VAR_cep);
+		cSemaphore_signal();
+
+		return E_OBJ;
+	}
+	else {
+
+#ifndef TCP_CFG_RWBUF_CSAVE
+
+		if (!IS_PTR_DEFINED(VAR_rbuf)) {
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+			/* タイムアウトをチェックする。*/
+			if (tmout == TMO_NBLK) {	/* ノンブロッキングコール */
+				if (!IS_PTR_DEFINED(cep->callback))
+					*error = E_OBJ;
+				else {
+					*error = E_OBJ;
+
+					/* コールバック関数を呼び出す。*/
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+					(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)*error);
+#else
+					(*cep->callback)(GET_TCP_CEPID(cep), fncd, (void*)error);
+#endif
+					*error = E_WBLK;
+					}
+				}
+			else
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+				*error = E_OBJ;
+
+			return E_OBJ;
+		}
+
+#endif	/* of #ifndef TCP_CFG_RWBUF_CSAVE */
+
+		return E_OK;
+	}
+}
 
 /*
  *  tecs_tcp_set_persist_timer -- 持続タイマの設定
