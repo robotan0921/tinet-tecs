@@ -266,13 +266,17 @@ get_tTask_DES()
 }
 
 
-#define tTCPCEP_cCallingSendTask_bind(p_that) \
+//TODO: #define tTCPCEP_cCallingSendTask_bind(p_that) \
   (p_that)->cCallingSendTask = get_tTask_DES()
-#define cCallingSendTask_bind() tTCPCEP_cCallingSendTask_bind(p_cellcb)
+#define tTCPCEP_cCallingSendTask_bind(p_that)
+//TODO: #define cCallingSendTask_bind() tTCPCEP_cCallingSendTask_bind(p_cellcb)
+#define cCallingSendTask_bind()
 
-#define tTCPCEP_cCallingReceiveTask_bind(p_that) \
+//TODO: #define tTCPCEP_cCallingReceiveTask_bind(p_that) \
   (p_that)->cCallingReceiveTask = get_tTask_DES()
-#define cCallingReceiveTask_bind() tTCPCEP_cCallingReceiveTask_bind(p_cellcb)
+#define tTCPCEP_cCallingReceiveTask_bind(p_that)
+//TODO: #define cCallingReceiveTask_bind() tTCPCEP_cCallingReceiveTask_bind(p_cellcb)
+#define cCallingReceiveTask_bind()
 //mikanここまで
 
 #define sREP4_entrypoint intptr_t//シグニチャ用につけられる
@@ -280,10 +284,14 @@ get_tTask_DES()
 #define sREP4_cREP4_bind(des)
 //TODO: #define sREP4_cREP4_unbind() ((p_cellcb)->cREP4 = NULL)
 #define sREP4_cREP4_unbind()
-#define sTask_cCallingSendTask_bind(des) ((p_cellcb)->cCallingSendTask = (struct tag_sTask_VDES *)(des))
-#define sTask_cCallingSendTask_unbind() ((p_cellcb)->cCallingSendTask = NULL)
-#define sTask_cCallingReceiveTask_bind(des) ((p_cellcb)->cCallingReceiveTask = (struct tag_sTask_VDES *)(des))
-#define sTask_cCallingReceiveTask_unbind() ((p_cellcb)->cCallingReceiveTask = NULL)
+//TODO: #define sTask_cCallingSendTask_bind(des) ((p_cellcb)->cCallingSendTask = (struct tag_sTask_VDES *)(des))
+#define sTask_cCallingSendTask_bind(des)
+//TODO: #define sTask_cCallingSendTask_unbind() ((p_cellcb)->cCallingSendTask = NULL)
+#define sTask_cCallingSendTask_unbind()
+//TODO: #define sTask_cCallingReceiveTask_bind(des) ((p_cellcb)->cCallingReceiveTask = (struct tag_sTask_VDES *)(des))
+#define sTask_cCallingReceiveTask_bind(des)
+//TODO: #define sTask_cCallingReceiveTask_unbind() ((p_cellcb)->cCallingReceiveTask = NULL)
+#define sTask_cCallingReceiveTask_unbind()
 /* dynamic conecction */
 
 /*
@@ -297,6 +305,8 @@ static T_TCP_CEP *tecs_tcp_timers (CELLCB *p_cellcb, int_t tix);
 static uint8_t 	 tecs_tcp_move_ra2rw (CELLCB *p_cellcb, uint8_t flags);
 static uint8_t 	 tecs_tcp_write_raque (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t flags);
 static T_TCP_TIME tecs_tcp_rexmt_val (CELLCB *p_cellcb);
+static void 	 tecs_tcp_init_cep (CELLCB *p_cellcb);
+static ER 		 tecs_tcp_lock_cep (CELLCB *p_cellcb, FN tfn);
 static T_TCP_CEP *tecs_tcp_close (CELLCB *p_cellcb);
 static void 	 tecs_tcp_free_reassq (CELLCB *p_cellcb);
 static T_TCP_CEP *tecs_tcp_drop (CELLCB *p_cellcb, ER errno);
@@ -1153,6 +1163,9 @@ eCEPInput_notify(CELLIDX idx, ER error)
  * global_name:  tTCPCEP_eAPI_accept
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  tcp_acp_cep -- 接続要求待ち (受動オープン)【標準機能】
+ */
 ER
 eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 {
@@ -1166,8 +1179,252 @@ eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	ER			error;
+	FLGPTN		flag;
+	T_IN4_ADDR 	my4addr;
+	T_IPV4EP 	ep4;
 
-	return(ercd);
+#if 0
+#if defined(SUPPORT_INET6) && defined(SUPPORT_INET4)
+
+	/*
+	 * API (tcp6_acp_cep と tcp_acp_cep) と、
+	 * TCP通信端点のプロトコルが矛盾していればエラー
+	 */
+
+#if API_PROTO == API_PROTO_IPV6
+
+	if (GET_TCP_CEP(cepid)->flags & TCP_CEP_FLG_IPV4)
+		return E_ID;
+
+#endif	/* of #if API_PROTO == API_PROTO_IPV6 */
+
+#if API_PROTO == API_PROTO_IPV4
+
+	if ((GET_TCP_CEP(cepid)->flags & TCP_CEP_FLG_IPV4) == 0)
+		return E_ID;
+
+#endif	/* of #if API_PROTO == API_PROTO_IPV4 */
+
+#endif	/* of #if defined(SUPPORT_INET6) && defined(SUPPORT_INET4) */
+
+	/* TCP 受付口をチェックする。*/
+	if (!VALID_TCP_REPID(repid))
+		return E_ID;
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+	/* p_dstaddr が NULL ならエラー */
+	if (p_dstaddr == NULL)
+		return E_PAR;
+
+#else	/* of #ifdef TCP_CFG_NON_BLOCKING */
+
+	/* p_dstaddr が NULL か、tmout が TMO_NBLK ならエラー */
+	if (p_dstaddr == NULL || tmout == TMO_NBLK)
+		return E_PAR;
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+
+#if (API_PROTO == API_PROTO_IPV6) && !defined(API_CFG_IP4MAPPED_ADDR)
+
+	/*
+	 * API が IPv6 で IPv4 射影アドレスが認められていないのにもかかわらず、
+	 * IPv4 射影アドレスが指定されたらエラー
+	 */
+	if (in6_is_addr_ipv4mapped(&p_dstaddr->ipaddr))
+		return E_PAR;
+
+#endif	/* of #if (API_PROTO == API_PROTO_IPV6) && !defined(DAPI_CFG_IP4MAPPED_ADDR) */
+#endif 	/* of #if 0 */
+
+	/*
+	 *  CEP をロックし、API 機能コードとタスク識別子を記録する。
+	 *  すでに記録されていれば、ペンディング中なのでエラー
+	 */
+	if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_ACP_CEP)) != E_OK)
+		return error;
+
+	/* CEP の FSM がクローズ状態でなければエラー。*/
+	if (VAR_cep.fsm_state != TCP_FSM_CLOSED) {
+		error = E_OBJ;
+		goto err_ret;
+	}
+	cEstFlag_clear((FLGPTN)(~TCP_CEP_EVT_CLOSED));
+
+	/* TCP 通信端点を初期化する。*/
+	tecs_tcp_init_cep(p_cellcb);
+
+	/* TCP 受付口を得る。*/
+	// rep = GET_TCP_REP(repid);
+	sREP4_cREP4_bind(sREP4);
+
+#ifdef TCP_CFG_EXTENTIONS
+
+	/* TCP 受付口をロックする。*/
+	syscall(wai_sem(rep->semid_lock));
+
+	/* TCP 受付口をチェックする。*/
+	if (!VALID_TCP_REP(rep)) {
+		syscall(sig_sem(rep->semid_lock));
+		error = E_NOEXS;
+		goto err_ret;
+		}
+
+#endif	/* of #ifdef TCP_CFG_EXTENTIONS */
+
+	/* TCP 通信端点にTCP受付口を記録する。*/
+#if 0
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+
+#if API_PROTO == API_PROTO_IPV6
+
+	cep->rep = rep;
+
+#else	/* of #if API_PROTO == API_PROTO_IPV6 */
+
+	cep->rep4 = rep;
+
+#endif	/*of #if API_PROTO == API_PROTO_IPV6 */
+
+#else	/* of #if defined(_IP6_CFG) && defined(_IP4_CFG) */
+
+	cep->rep = rep;
+
+#endif	/* of #if defined(_IP6_CFG) && defined(_IP4_CFG) */
+
+#ifdef TCP_CFG_EXTENTIONS
+
+	/* TCP 受付口のロックを解除する。*/
+	syscall(sig_sem(rep->semid_lock));
+
+#endif	/* of #ifdef TCP_CFG_EXTENTIONS */
+#endif 	/* of #if 0 */
+
+	/* TCP 受付口のアドレスをコピーする。*/
+	if(ATTR_ipLength == 4){
+		ep4 = cREP4_getEndpoint();
+		cGetAddress_setMy4Address(ep4.ipaddr);
+	}
+	VAR_myport = ep4.portno;
+
+#if 0
+#if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4)
+
+	if (rep->myaddr.ipaddr == IPV4_ADDRANY)
+		memcpy(&cep->myaddr.ipaddr, &in6_addr_unspecified,
+		                      sizeof(in6_addr_unspecified));
+	else
+		in6_make_ipv4mapped(&cep->myaddr.ipaddr, rep->myaddr.ipaddr);
+	cep->myaddr.portno = rep->myaddr.portno;
+
+#else	/* of #if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4) */
+
+	cep->myaddr = rep->myaddr;
+
+#endif	/* of #if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4) */
+
+#if API_PROTO == API_PROTO_IPV4
+
+	/* TCP 通信端点のネットワーク層プロトコルを設定する。*/
+	cep->flags |= TCP_CEP_FLG_IPV4;
+
+#endif	/* of #if API_PROTO == API_PROTO_IPV4 */
+#endif 	/* of #if 0*/
+
+	/* 通信端点を設定する。*/
+	VAR_cep.fsm_state = TCP_FSM_LISTEN;
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+	/* タイムアウトをチェックする。*/
+	if (tmout == TMO_NBLK) {
+		/* ノンブロッキングコール */
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+
+#if API_PROTO == API_PROTO_IPV4
+
+		cep->p_dstaddr4   = p_dstaddr;
+		cep->p_dstaddr    = NULL;
+
+#else	/* of #if API_PROTO == API_PROTO_IPV4 */
+
+		cep->p_dstaddr4   = NULL;
+		cep->p_dstaddr    = p_dstaddr;
+
+#endif	/* of #if API_PROTO == API_PROTO_IPV4 */
+
+#else	/* of #if defined(_IP6_CFG) && defined(_IP4_CFG) */
+
+		cep->p_dstaddr    = p_dstaddr;
+
+#endif	/* of #if defined(_IP6_CFG) && defined(_IP4_CFG) */
+
+		cep->rcv_nblk_tfn = TFN_TCP_ACP_CEP;
+		return E_WBLK;
+		}
+	else {
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+		/*
+		 *  FSM が ESTABLISHED になるまで待つ。
+		 *  FSM が CLOSED になった場合は、エラーが発生したことを意味している。
+		 */
+		error = cEstFlag_waitTimeout((TCP_CEP_EVT_CLOSED | TCP_CEP_EVT_ESTABLISHED), TWF_ORW, &flag, tmout);
+		if (error == E_OK) {
+			if (VAR_cep.error != E_OK)
+				error = VAR_cep.error;
+			else if (VAR_cep.fsm_state == TCP_FSM_CLOSED)
+				error = E_TMOUT;
+		}
+
+		cEstFlag_clear((FLGPTN)(~TCP_CEP_EVT_ESTABLISHED));
+
+		if (error == E_OK) {
+			/* 相手のアドレスをコピーする。*/
+#if 0
+#if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4)
+			p_dstaddr->ipaddr = ntohl(cep->dstaddr.ipaddr.s6_addr32[3]);
+			p_dstaddr->portno = cep->dstaddr.portno;
+#else
+			*p_dstaddr = cep->dstaddr;
+#endif
+#endif 	/* of #if 0 */
+		}
+		else {
+			/*
+			 *  通信端点から受付口を解放し、
+			 *  イベントフラグをクローズに設定する。
+			 */
+			sREP4_cREP4_unbind();
+			// cep->rep = NULL;
+#if 0
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+			cep->rep4 = NULL;
+#endif
+#endif 	/* of #if 0 */
+
+			VAR_cep.fsm_state = TCP_FSM_CLOSED;
+			cEstFlag_set(TCP_CEP_EVT_CLOSED);
+		}
+
+		*dstport = VAR_dstport;
+#if 0
+#ifdef TCP_CFG_NON_BLOCKING
+
+		}
+
+#endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
+#endif 	/* of #if 0 */
+
+err_ret:
+	VAR_cep.rcv_tskid = TA_NULL;
+	sTask_cCallingReceiveTask_unbind();
+	VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+	return error;
 }
 
 /* #[<ENTRY_FUNC>]# eAPI_connect
@@ -2033,7 +2290,7 @@ tecs_tcp_set_persist_timer (CELLCB *p_cellcb)
  *  tecs_tcp_move_ra2rw -- 受信再構成キューで再構成したセグメントを受信ウィンドバッファに書き込む。
  */
 
-uint8_t
+static uint8_t
 tecs_tcp_move_ra2rw (CELLCB *p_cellcb, uint8_t flags)
 {
 	T_NET_BUF	*q;
@@ -2078,7 +2335,7 @@ tecs_tcp_move_ra2rw (CELLCB *p_cellcb, uint8_t flags)
  *  tecs_tcp_write_raque -- 受信セグメントを再構成して、受信再構成キューに繋ぐ。
  */
 
-uint8_t
+static uint8_t
 tecs_tcp_write_raque (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t flags)
 {
 	T_NET_BUF	*new;
@@ -2311,6 +2568,143 @@ tecs_tcp_rexmt_val (CELLCB *p_cellcb)
 		return TCP_TVAL_MIN;
 	else
 	  return val;
+}
+
+/*
+ *  tecs_tcp_init_cep -- 通信端点を初期化する。
+ */
+
+static void
+tecs_tcp_init_cep (CELLCB *p_cellcb)
+{
+#if 0
+#ifdef TCP_CFG_RWBUF_CSAVE
+	/*
+	 * 受信ウィンドバッファの省コピー機能を有効にした場合、
+	 * 受信ウィンドバッファが全て解放されないことがあるので、
+	 * ここで解放する。
+	 */
+	if (cep->rwbufq != NULL) {
+		cep->rwbuf_count = 0;
+		TCP_FREE_RWBUFQ(cep);
+		}
+#endif	/* of #ifdef TCP_CFG_RWBUF_CSAVE */
+#endif
+
+	// memset((uint8_t*)cep + offsetof(T_TCP_CEP, timer), 0,
+	       // sizeof(T_TCP_CEP) - offsetof(T_TCP_CEP, timer));
+	for (int_t ix = 0; ix < NUM_TCP_TIMERS; ix++)
+		VAR_cep.timer[ix] = 0;
+	VAR_cep.reassq 			= 0;	/* 受信再構成キュー			*/
+	VAR_cep.snd_una 		= 0;	/* 未確認の最小送信 SEQ つまり	*/
+									/* 確認された最大送信 SEQ		*/
+	VAR_cep.snd_max 		= 0;	/* 送信した最大 SEQ			*/
+	VAR_cep.snd_nxt 		= 0;	/* 次に送信する SEQ			*/
+	VAR_cep.snd_old_nxt 	= 0;	/* 元の snd_nxt				*/
+	VAR_cep.snd_wl1 		= 0;	/* 前回ウィンドを更新した SEQ	 	*/
+	VAR_cep.snd_wl2 		= 0;	/* 前回ウィンドを更新した ACK 	*/
+	VAR_cep.iss 			= 0;	/* 自分の SEQ の初期値		*/
+	VAR_cep.irs 			= 0;	/* 相手の SEQ の初期値		*/
+	VAR_cep.rcv_nxt 		= 0;	/* 受信を期待している最小の SEQ	*/
+	VAR_cep.rcv_adv 		= 0;	/* 受信を期待している最大の SEQ	*/
+	VAR_cep.rcv_wnd 		= 0;	/* 受信可能なウィンドサイズ		*/
+	VAR_cep.rtseq 			= 0;	/* 時間計測を始めた SEQ		*/
+	VAR_cep.last_ack_sent 	= 0;	/* 最後に送信した ACK			*/
+	VAR_cep.idle 			= 0;	/* アイドル時間				*/
+	VAR_cep.error 			= 0;	/* 非同期に発生したエラー		*/
+	VAR_cep.net_error 		= 0;	/* ネットワークのエラー状態		*/
+	VAR_cep.snd_wnd 		= 0;	/* 相手の受信可能ウィンドサイズ	*/
+	VAR_cep.max_sndwnd 		= 0;	/* 今までの最大送信ウィンドサイズ	*/
+	VAR_cep.rtt 			= 0;	/* 往復時間					*/
+	VAR_cep.swbuf_count 	= 0;	/* 送信ウィンドバッファの使用中サイズ	*/
+	VAR_cep.rwbuf_count 	= 0;	/* 受信ウィンドバッファの使用中サイズ	*/
+	VAR_cep.rcv_buf_len 	= 0;	/* tcp_rcv_buf の割当て長		*/
+	VAR_cep.get_buf_len 	= 0;	/* tcp_rcv_buf の割当て長		*/
+	VAR_cep.rxtshift 		= 0;	/* 再送信回数の log(2)		*/
+	VAR_cep.fsm_state 		= 0;	/* FSM 状態					*/
+	VAR_cep.dupacks 		= 0;	/* 再送 ACK 数				*/
+
+	VAR_cep.sbuf_rptr = VAR_cep.sbuf_wptr = VAR_sbuf;
+	VAR_cep.rbuf_rptr = VAR_cep.rbuf_wptr = VAR_rbuf;
+
+	if (ATTR_ipLength == 4)
+		VAR_cep.maxseg	= TCP_MSS;		/* 送信最大セグメントサイズ		*/
+	else
+		VAR_cep.maxseg  = TCP6_MSS;
+	//CEHCK cep->maxseg	= DEF_TCP_SND_SEG;		/* 送信最大セグメントサイズ		*/
+	VAR_cep.srtt	= TCP_TVAL_SRTT_BASE;		/* 滑らかな移動平均			*/
+	VAR_cep.rttvar	= ((TCP_TVAL_RTO_BASE - TCP_TVAL_SRTT_BASE) << TCP_RTTVAR_SHIFT) / 4;
+							/* 滑らかな分散				*/
+	VAR_cep.rxtcur	= TCP_TVAL_RTO_BASE;		/* 現在の再送値				*/
+	VAR_cep.snd_cwnd	=  MAX_TCP_WIN_SIZE;		/* 輻輳ウィンドサイズ			*/
+	VAR_cep.snd_ssthresh= MAX_TCP_WIN_SIZE;		/* 輻輳ウィンドサイズ(snd_cwnd)の	制限値	*/
+
+	/*
+	 * 以下に関係しないフラグをクリアーする。
+	 * ・送受信ウィンドバッファの省コピー機能
+	 * ・動的な通信端点の生成・削除機能
+	 * ・通信端点のネットワーク層プロトコル
+	 */
+	VAR_flags &= (TCP_CEP_FLG_WBCS_NBUF_REQ | TCP_CEP_FLG_WBCS_MASK |
+	              TCP_CEP_FLG_DYNAMIC       | TCP_CEP_FLG_VALID);
+
+	/* セマフォを初期化する。*/
+	cSemaphore_signal();
+
+	/* フラグを初期化する。*/
+	cSendFlag_set(TCP_CEP_EVT_SWBUF_READY);
+	cRcvFlag_clear(TCP_CEP_EVT_RWBUF_READY);
+}
+
+/*
+ *  tecs_tcp_lock_cep -- TCP 通信端点をロックする。
+ */
+
+static ER
+tecs_tcp_lock_cep (CELLCB *p_cellcb, FN tfn)
+{
+	ER error = E_OK;
+
+	/* TCP 通信端点をロックする。*/
+	cSemaphore_wait();
+
+	/* TCP 通信端点をチェックする。*/
+	//TEMP if (!VALID_TCP_CEP {
+	if (!(VAR_flags & TCP_CEP_FLG_VALID) != 0) {
+		cSemaphore_signal();
+		return E_NOEXS;
+	}
+
+	/*
+	 *  API 機能コードとタスク識別子を記録する。
+	 *  すでに記録されていれば、ペンディング中なのでエラー
+	 */
+	if (IS_TFN_TCP_RCV(tfn)) {
+		if (VAR_cep.rcv_tfn != TFN_TCP_UNDEF ||
+		    (tfn == TFN_TCP_ACP_CEP && VAR_cep.snd_tfn == TFN_TCP_CON_CEP))
+			error = E_OBJ;
+		else {
+			getTaskId(&(VAR_cep.rcv_tskid));
+			cCallingReceiveTask_bind();
+			VAR_cep.rcv_tfn = tfn;
+		}
+	}
+	else {
+		if (VAR_cep.snd_tfn != TFN_TCP_UNDEF ||
+		    (tfn == TFN_TCP_CON_CEP && VAR_cep.rcv_tfn == TFN_TCP_ACP_CEP) ||
+		    (tfn == TFN_TCP_CON_CEP && VAR_cep.rcv_tfn == TFN_TCP_CLS_CEP))
+			error = E_OBJ;
+		else {
+			getTaskId(&(VAR_cep.snd_tskid));
+			cCallingSendTask_bind();
+			VAR_cep.snd_tfn = tfn;
+		}
+	}
+
+	/* 通信端点のロックを解除する。*/
+	cSemaphore_signal();
+
+	return error;
 }
 
 /*
