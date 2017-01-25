@@ -46,13 +46,16 @@
  * global_name:  tNetworkBuffer_eNetworkAlloc_alloc
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  tget_net_buf_up -- 大きなサイズの方向に探索して、ネットワークバッファを獲得する。
+ */
 ER
 eNetworkAlloc_alloc(void** buf, const int32_t minlen, TMO tmout)
 {
-	int32_t len = minlen+sizeof(T_NET_BUF);
+	int32_t len = minlen + sizeof(T_NET_BUF);
 
 	if (minlen > cMemoryPoolStatus_getSize(0)) {
-		syslog(LOG_EMERG, "[NET BUF] E_PAR, minlen=%4d > %4d",minlen,cMemoryPoolStatus_getSize(0));
+		syslog(LOG_EMERG, "[NET BUF] E_PAR, minlen=%4d > %4d", minlen, cMemoryPoolStatus_getSize(0));
 		return E_PAR;
 	}
 
@@ -83,7 +86,6 @@ eNetworkAlloc_alloc(void** buf, const int32_t minlen, TMO tmout)
 
 	*buf = NULL;
 	return error;
-
 }
 
 /* #[<ENTRY_FUNC>]# eNetworkAlloc_dealloc
@@ -91,6 +93,9 @@ eNetworkAlloc_alloc(void** buf, const int32_t minlen, TMO tmout)
  * global_name:  tNetworkBuffer_eNetworkAlloc_dealloc
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ * rel_net_buf -- ネットワークバッファを返却する。
+ */
 ER
 eNetworkAlloc_dealloc(const void* buf)
 {
@@ -104,9 +109,23 @@ eNetworkAlloc_dealloc(const void* buf)
 		error = E_ID;
 		}
 	else {
+#if 0
+#if defined(SUPPORT_TCP) && defined(TCP_CFG_SWBUF_CSAVE)
 
-		error = cFixedSizeMemoryPool_release(tmp->idix,buf);
+		/* TCP で、ネットワークバッファを予約する。*/
+		if (TCP_PUSH_RES_NBUF(buf) == NULL)
+			return E_OK;
 
+#endif	/* of #if defined(SUPPORT_TCP) && defined(TCP_CFG_SWBUF_CSAVE) */
+
+		/* 固定メモリプールに返す。*/
+
+#if NET_COUNT_ENABLE & PROTO_FLG_NET_BUF
+		net_buf_table[buf->idix].busies --;
+#endif
+#endif	/* of #if 0 */
+		if (error = cFixedSizeMemoryPool_release(tmp->idix, buf) != E_OK)
+			syslog(LOG_WARNING, "[NET BUF] %s, ID=%d.", error, tmp->idix);
 	}
 
 	return error;
@@ -117,6 +136,9 @@ eNetworkAlloc_dealloc(const void* buf)
  * global_name:  tNetworkBuffer_eNetworkAlloc_reuse
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ * rus_net_buf -- ネットワークバッファを再利用する。
+ */
 ER
 eNetworkAlloc_reuse(void* buf)
 {
@@ -142,15 +164,18 @@ eNetworkAlloc_reuse(void* buf)
  * global_name:  tNetworkBuffer_eNetworkAlloc_bufferSize
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ * net_buf_siz -- ネットワークバッファのサイズを返す。
+ */
 ER_UINT
 eNetworkAlloc_bufferSize(const void* buf)
 {
 	T_NET_BUF* tmp = (T_NET_BUF *)buf;
 
 	if(tmp->idix >= N_CP_cFixedSizeMemoryPool)
-	  return E_ID;
-	return (ER_UINT)cMemoryPoolStatus_getSize(tmp->idix);
+		return E_ID;
 
+	return (ER_UINT)cMemoryPoolStatus_getSize(tmp->idix);
 }
 
 /* #[<ENTRY_FUNC>]# eNetworkAlloc_bufferMaxSize
@@ -158,6 +183,9 @@ eNetworkAlloc_bufferSize(const void* buf)
  * global_name:  tNetworkBuffer_eNetworkAlloc_bufferMaxSize
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ * net_buf_max_siz -- ネットワークバッファの最大サイズを返す。
+ */
 uint32_t
 eNetworkAlloc_bufferMaxSize()
 {
