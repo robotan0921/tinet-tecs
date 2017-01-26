@@ -97,7 +97,7 @@ eTaskBody_main()
 	int8_t data[NUM_SEND_DATA];
 
 	getTaskId(&tskid);
-	syslog(LOG_EMERG, "Main function started!! [ID:%d]", tskid);
+	syslog(LOG_EMERG, "Application started!! [ID:%d]", tskid);
 
 	for(i=0;i<NUM_SEND_DATA;i++)
 	  data[i] = 10;
@@ -114,7 +114,7 @@ eTaskBody_main()
 		cTCPAPI4_send(data, rlen, TMO_FEVR);
 	}
 
-	syslog(LOG_EMERG, "Main function over!! [ID:%d]", tskid);
+	syslog(LOG_EMERG, "Application ended!! [ID:%d]", tskid);
 }
 
 /* #[<POSTAMBLE>]#
