@@ -33,7 +33,7 @@ cell tTask ApplicationTask {
     cTaskBody = ApplicationBody.eTaskBody;
 
     attribute = C_EXP("TA_ACT");
-    priority  = 10;
+    priority  = 11;
     stackSize = 1024;
 };
 
@@ -255,10 +255,7 @@ cell tIfMbedAdapter IfMbedAdapter {
 
 	cNicDriver = IfMbed.eNicDriver;
 };
-cell tIPv4InputAdapter IPv4InputAdapter {
 
-    cIPv4Input = IPv4Input.eIPv4Input;
-};
 /*
 *   Dataquque, Semaphore etc.
 */
