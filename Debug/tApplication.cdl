@@ -1,0 +1,25 @@
+/*
+ *   アプリケーションレイヤのCDL記述
+ */
+
+[active,singleton]
+celltype tApplicationBody {
+    require tKernel.eKernel;
+
+    call sTCPCEPAPI4 cTCPAPI4;
+    // call sUDPCEPAPI4 cUDPAPI4;
+
+    call sREP4 cREP4_000;
+    // call sREP4 cREP4_001;
+
+    entry sTaskBody eTaskBody;
+};
+
+/*
+[active,singleton]
+celltype tRelTest {
+    call sUDPCEPAPI4 cUDPAPI4;
+
+    entry sTaskBody eBody;
+};
+*/
