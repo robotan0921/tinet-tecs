@@ -300,6 +300,7 @@ get_tTask_DES()
  *	TODO: 関数名の先頭に tecs_ を使う
  */
 
+static T_TCP_CEP *tecs_tcp_user_closed (CELLCB *p_cellcb);
 static void 	 tecs_tcp_output (CELLCB *p_cellcb);
 static T_TCP_CEP *tecs_tcp_timers (CELLCB *p_cellcb, int_t tix);
 static ER 		 tecs_tcp_wait_rwbuf (CELLCB *p_cellcb, TMO tmout);
@@ -1720,6 +1721,9 @@ eAPI_close(CELLIDX idx, TMO tmout)
  * global_name:  tTCPCEP_eAPI_shutdown
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  tcp_sht_cep  -- データ送信の終了【標準機能】
+ */
 ER
 eAPI_shutdown(CELLIDX idx)
 {
@@ -1733,8 +1737,32 @@ eAPI_shutdown(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	T_TCP_CEP	*cep 	= &VAR_cep;
+	ER 			error 	= E_OK;
 
-	return(ercd);
+	/*
+	 *  CEP をロックし、API 機能コードとタスク識別子を記録する。
+	 *  すでに記録されていれば、ペンディング中なのでエラー
+	 */
+	if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_SHT_CEP)) != E_OK)
+		return error;
+
+	/* TCP 通信端点のコネクションが確立状態でなければエラー */
+	if (!TCP_FSM_HAVE_ESTABLISHED(VAR_cep.fsm_state)) {
+		if ((error = VAR_cep.error) == E_OK)
+			error = E_OBJ;
+	}
+
+	else if ((cep = tecs_tcp_user_closed(p_cellcb)) != NULL) {		/* コネクションを切断する。*/
+
+		/* 切断セグメント出力をポストする。*/
+		VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
+		cSemaphoreTcpcep_signal();
+	}
+
+	VAR_cep.snd_tskid = TA_NULL;
+	VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
+	return error;
 }
 
 /* #[<ENTRY_PORT>]# eInitializeRoutineBody
@@ -1767,6 +1795,41 @@ eInitializeRoutineBody_main(CELLIDX idx)
  *   これより下に非受け口関数を書きます
  * #[</POSTAMBLE>]#*/
 
+/*
+ *  tecs_tcp_user_closed -- ユーザからのコネクションの開放
+ */
+
+static T_TCP_CEP *
+tecs_tcp_user_closed (CELLCB *p_cellcb)
+{
+	T_TCP_CEP *cep = &VAR_cep;
+
+	switch (VAR_cep.fsm_state) {
+
+	case TCP_FSM_CLOSED:		/* クローズ	*/
+	case TCP_FSM_LISTEN:		/* 受動オープン	*/
+		VAR_cep.fsm_state = TCP_FSM_CLOSED;
+		cep = tecs_tcp_close(p_cellcb);
+		break;
+
+	case TCP_FSM_SYN_SENT:		/* 能動オープン、SYN 送信済み	*/
+	case TCP_FSM_SYN_RECVD:		/* SYN を受信し、SYN 送信済み	*/
+		VAR_flags |= TCP_CEP_FLG_NEED_FIN;
+		break;
+
+	case TCP_FSM_ESTABLISHED:	/* コネクション開設完了	*/
+		VAR_cep.fsm_state = TCP_FSM_FIN_WAIT_1;
+		break;
+
+	case TCP_FSM_CLOSE_WAIT:	/* 相手から FIN 受信、APP の終了待ち */
+		VAR_cep.fsm_state = TCP_FSM_LAST_ACK;
+		break;
+	}
+
+	if (cep != NULL && VAR_cep.fsm_state == TCP_FSM_FIN_WAIT_2)
+		VAR_cep.timer[TCP_TIM_2MSL] = TCP_TVAL_KEEP_COUNT * TCP_TVAL_KEEP_INTERVAL;
+	return cep;
+}
 /*
  *  tecs_tcp_output -- TCP 出力処理
  */
