@@ -78,18 +78,6 @@ signature sCopySave {
     void        tcpFreeSwbufq([inout]T_TCP_CEP *cep);
 };
 
-signature sREP4 {
-    T_IPV4EP    getEndpoint(void);
-    ER          signal(void);
-    ER          wait(void);
-    ER 	        waitPolling(void);
-    ER          waitTimeout([in] TMO timeout);
-    ER 	        initialize(void);
-    ER 	        refer([out] T_RSEM *pk_semaphoreStatus);
-};
-
-
-
 [singleton]
 celltype tTCPFunctions {
 
@@ -324,44 +312,7 @@ composite tTCPCEP4 {
         cInitializeRoutineBody = TCPCEP.eInitializeRoutineBody;
     };
 
-    composite.eCEPInput          => TCPCEP.eCEPInput;
+    composite.eCEPInput       => TCPCEP.eCEPInput;
     composite.eAPI            => TCPCEPwrapper4.eAPI4;
     composite.eTCPOutputStart => TCPCEP.eTCPOutputStart;
-};
-
-celltype tREP4sub {
-
-    call sSemaphore cSemaphore;
-
-    entry sREP4 eREP4;
-
-    attr{
-        ATR         repatr = 0;
-        T_IN4_ADDR  myaddr;
-        uint16_t    myport;
-    };
-};
-
-composite tREP4 {
-
-    entry sREP4 eREP4;
-
-    attr {
-        T_IN4_ADDR  myaddr;
-        uint16_t    myport;
-    };
-
-    cell tSemaphore Semaphore {
-        attribute    = C_EXP("TA_TPRI");
-        initialCount = 1;
-        maxCount     = 1;
-    };
-
-    cell tREP4sub REP4sub {
-        myaddr      = composite.myaddr;
-        myport      = composite.myport;
-        cSemaphore  = Semaphore.eSemaphore;
-    };
-
-    composite.eREP4 => REP4sub.eREP4;
 };

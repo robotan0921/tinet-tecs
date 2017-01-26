@@ -12,11 +12,38 @@ import("netinet/tIPv4.cdl");
 import("netinet/tArp.cdl");
 import("netinet/tIPv4InputAdapter.cdl");
 
+import("netinet/tREP.cdl");
+
 import("netinet/tTCP.cdl");
+
+import("tApplication.cdl");
 
 /* CPCEPの数 */
 const uint32_t NUM_TCPCEP = 1;
 
+/* アプリケーション層 */
+cell tApplicationBody ApplicationBody {
+    cTCPAPI4 = TCPCEP_000.eAPI;
+    // cUDPAPI4 = UDPCEP_000.eAPI;
+    cREP4_000 = REP4_000.eREP4;
+    // cREP4_001 = REP4_001.eREP4;
+};
+
+cell tTask ApplicationTask {
+    cTaskBody = ApplicationBody.eTaskBody;
+
+    attribute = C_EXP("TA_ACT");
+    priority  = 10;
+    stackSize = 1024;
+};
+
+/* REP (受付け口) */
+cell tREP4 REP4_000 {
+    myaddr = C_EXP("MAKE_IPV4_ADDR(192,168,1,200)");
+    myport = 50000;
+};
+
+/* TCPCEP (通信端点) */
 [generate(RepeatCellPlugin, "count = NUM_TCPCEP"),allocator(eCEPInput.input.inputp=NetworkBuffer.eNetworkAlloc)] //TODO: 逆リクワイアが使えないためとりあえず
 cell tTCPCEP4 TCPCEP_000 {
 
