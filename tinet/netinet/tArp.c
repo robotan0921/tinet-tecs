@@ -177,6 +177,10 @@ buf_rel:
  * signature:  sArpOutput
  * context:    task
  * #[</ENTRY_PORT>]# */
+//TEMP:
+ER
+eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dstaddr, const uint8_t* macaddress, TMO tmout)
+{}
 #if 0
 /* #[<ENTRY_FUNC>]# eArpOutput_arpResolve
  * name:         eArpOutput_arpResolve

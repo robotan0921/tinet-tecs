@@ -219,8 +219,8 @@ eCopySave_tcpReadSwbuf(CELLIDX idx, T_TCP_CEP* cep, int8_t* outputp, int32_t siz
 	T_NET_BUF *output = (T_NET_BUF *)outputp;
 
 	/* SDU の大きさをチェックする。*///TCPヘッダはオプションがつくがIPヘッダは固定長
-	if (output->off.tphdrlenall < GET_TCP_HDR_SIZE2(output, hoff)) {
-		len = output->off.tphdrlenall+len - GET_TCP_HDR_SIZE2(output,hoff);
+	if (output->off.tphdrlenall < GET_TCP_HDR_SIZE(output, hoff)) {
+		len = output->off.tphdrlenall+len - GET_TCP_HDR_SIZE(output,hoff);
 	}
 
 	wptr = GET_TCP_SDU(output, hoff);
@@ -278,7 +278,7 @@ eCopySave_tcpWaitSwbuf(CELLIDX idx, T_TCP_CEP* cep, uint32_t* flags, int32_t sbu
 		 *  送信ウィンドバッファが空くまで待つ。
 		 */
 		*flags |= TCP_CEP_FLG_POST_OUTPUT;
-		cSemTcppost_signal();
+		cSemaphoreTcppost_signal();
 
 		if ((error = cSendFlag_waitTimeout( TCP_CEP_EVT_SWBUF_READY, TWF_ORW,&flag,tmout )) != E_OK) {
 			return error;
@@ -450,7 +450,7 @@ eCopySave_tcpDropSwbuf(CELLIDX idx, T_TCP_CEP* cep, uint32_t len, const int8_t* 
 	if (cep->swbuf_count > 0) {
 		/* 送信ウィンドバッファにデータがあれば出力をポストする。*/
 		*flags |= TCP_CEP_FLG_POST_OUTPUT;
-		cSemTcppost_signal();
+		cSemaphoreTcppost_signal();
 	}
 }
 
