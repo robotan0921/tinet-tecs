@@ -103,8 +103,7 @@ DEVTOOLDIR =
 #  ユーティリティプログラムの名称
 #
 CFG = ruby -Eutf-8 $(SRCDIR)/cfg/cfg.rb
-#TECSGEN = ruby -Eutf-8 $(SRCDIR)/tecsgen/tecsgen.rb -L.
-TECSGEN = ruby -Eutf-8 $(SRCDIR)/tecsgen/tecsgen.rb -L. -U
+TECSGEN = ruby -Eutf-8 $(SRCDIR)/tecsgen/tecsgen.rb -L.
 
 #
 #  オブジェクトファイル名の定義
