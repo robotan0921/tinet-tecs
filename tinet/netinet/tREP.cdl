@@ -44,3 +44,17 @@ composite tREP4 {
 
     composite.eREP4 => REP4Body.eREP4;
 };
+
+signature sRepSelector {
+    void  getRep([out]Descriptor(sREP4) *rep, [in]int_t i);
+    void  getNRep([out]int_t *n);
+};
+
+celltype tRepSelector {
+    entry sRepSelector eRepSelector;
+    [ref_desc]
+        call sREP4 cREP[];
+    attr {
+        char *name = C_EXP( "\"$cell_global$\"");
+    };
+};

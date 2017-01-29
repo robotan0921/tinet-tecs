@@ -203,6 +203,8 @@ celltype tTCPCEP {
     require tKernel.eKernel;
     //require tTINET.eTINET;
 
+    call sRepSelector cRepSelector;
+
     call sCopySave cCopySave;
     call sTCPOutput cTCPOutput;
     call sTCPFunctions cTCPFunctions;
@@ -213,7 +215,7 @@ celltype tTCPCEP {
     call sEventflag cSendFlag;
     call sEventflag cRcvFlag;
     call sEventflag cEstFlag;
-    [optional]call sREP4 cREP4;                     //mikan v4限定になってるしホントはdynamicと記述したい
+    [dynamic,optional]call sREP4 cREP4;                     //mikan v4限定になってるしホントはdynamicと記述したい
     [optional]call sTask cCallingSendTask;
     [optional]call sTask cCallingReceiveTask;
 
@@ -244,6 +246,8 @@ celltype tTCPCEP {
 
 [active]
 composite tTCPCEP4 {
+
+    call sRepSelector cRepSelector;
 
     call sTCPFunctions  cTCPFunctions;
     call sSemaphore     cSemaphoreTcppost;
@@ -291,6 +295,8 @@ composite tTCPCEP4 {
         ipLength     = 4;
         sbufSizeInit = composite.sbufSize;
         rbufSizeInit = composite.rbufSize;
+
+        cRepSelector        => composite.cRepSelector;
 
         cCopySave           = CopySave.eCopySave;
         cTCPFunctions       => composite.cTCPFunctions;

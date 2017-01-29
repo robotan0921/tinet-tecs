@@ -57,12 +57,12 @@ eREP4_getEndpoint(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-		T_IPV4EP ep4;
+	T_IPV4EP ep4;
 
-		ep4.ipaddr = ATTR_myaddr;
-		ep4.portno = ATTR_myport;
+	ep4.ipaddr = ATTR_myaddr;
+	ep4.portno = ATTR_myport;
 
-		return ep4;
+	return ep4;
 }
 
 /* #[<ENTRY_FUNC>]# eREP4_signal
