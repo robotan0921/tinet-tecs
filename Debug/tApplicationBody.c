@@ -67,7 +67,7 @@
 #endif
 
 //dynamic-------
-#define cREP4_000_callport (intptr_t)tApplicationBody_SINGLE_CELL_CB.cREP4_000
+// #define cREP4_000_callport (intptr_t)tApplicationBody_SINGLE_CELL_CB.cREP4_000
 // #define cREP4_001_callport (intptr_t)tApplicationBody_SINGLE_CELL_CB.cREP4_001
 //-------dynamic
 
@@ -99,22 +99,25 @@ eTaskBody_main()
 	getTaskId(&tskid);
 	syslog(LOG_EMERG, "Application started!! [ID:%d]", tskid);
 
-	for(i=0;i<NUM_SEND_DATA;i++)
-	  data[i] = 10;
+	for(i = 0; i < NUM_SEND_DATA; i++)
+		data[i] = 10;
 
-	T_IN4_ADDR myaddr  = MAKE_IPV4_ADDR(192,168,1,200);
-	T_IN4_ADDR dstaddr = MAKE_IPV4_ADDR(192,168,1,201);
+	T_IN4_ADDR myaddr  = MYIP4ADDRESS;
+	T_IN4_ADDR dstaddr = MAKE_IPV4_ADDR(192,168,1,56);
 
 	T_IPV4EP dstep4;
 
-	cTCPAPI4_accept(cREP4_000_callport, &dstep4, TMO_FEVR );
+	error = cTCPAPI4_accept(0, &dstep4, TMO_FEVR );
 
-	while((rlen = cTCPAPI4_receive(data,100,TMO_FEVR)) > 0) {
+	while((rlen = cTCPAPI4_receive(data, 100, TMO_FEVR)) > 0) {
 		data[20] = '\0';
 		cTCPAPI4_send(data, rlen, TMO_FEVR);
 	}
 
+	syslog(LOG_EMERG, "rlen = %d", rlen);
+
 	syslog(LOG_EMERG, "Application ended!! [ID:%d]", tskid);
+	exitKernel();
 }
 
 /* #[<POSTAMBLE>]#

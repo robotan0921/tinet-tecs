@@ -15,34 +15,41 @@ import("netinet/tREP.cdl");
 
 import("netinet/tTCP.cdl");
 
-//import("tApplication.cdl");
+import("netinet/tTCPAPIAdapter.cdl");
+
+import("tApplication.cdl");
 
 cell tKernel Kernel {
 };
+
+/* ネットワークの定義 */
+const T_IN4_ADDR MYIP4ADDRESS = C_EXP("MAKE_IPV4_ADDR(192,168,1,200)");
+const T_IN4_ADDR MYIP4MASK    = C_EXP("MAKE_IPV4_ADDR(255,255,255,0)");
+const T_IN4_ADDR MYIP4GATAWAY = C_EXP("MAKE_IPV4_ADDR(192,168,1,1)");
 
 /* CPCEPの数 */
 const uint32_t NUM_TCPCEP = 1;
 
 /* アプリケーション層 */
-// cell tApplicationBody ApplicationBody {
-//     cTCPAPI4 = TCPCEP_000.eAPI;
-//     // cUDPAPI4 = UDPCEP_000.eAPI;
-//     cREP4_000 = REP4_000.eREP4;
-//     // cREP4_001 = REP4_001.eREP4;
-// };
+cell tApplicationBody ApplicationBody {
+    cTCPAPI4 = TCPCEP_000.eAPI;
+    // cUDPAPI4 = UDPCEP_000.eAPI;
+    cREP4_000 = REP4_000.eREP4;
+    // cREP4_001 = REP4_001.eREP4;
+};
 
-// cell tTask ApplicationTask {
+cell tTask ApplicationTask {
 
-//     cTaskBody = ApplicationBody.eTaskBody;
+    cTaskBody = ApplicationBody.eTaskBody;
 
-//     attribute = C_EXP("TA_ACT");
-//     priority  = 10;
-//     stackSize = 1024;
-// };
+    attribute = C_EXP("TA_ACT");
+    priority  = 9;
+    stackSize = 1024;
+};
 
 /* REP (受付け口) */
 cell tREP4 REP4_000 {
-    myaddr = C_EXP("MAKE_IPV4_ADDR(192,168,1,200)");
+    myaddr = MYIP4ADDRESS;
     myport = 50000;
 };
 
@@ -104,9 +111,6 @@ cell tTCPFunctions TCPFunctions {
 *   ネットワーク層
 *
 **/
-const T_IN4_ADDR MYIP4ADDRESS = C_EXP("MAKE_IPV4_ADDR(192,168,1,200)");
-const T_IN4_ADDR MYIP4MASK    = C_EXP("MAKE_IPV4_ADDR(255,255,255,0)");
-const T_IN4_ADDR MYIP4GATAWAY = C_EXP("MAKE_IPV4_ADDR(192,168,1,1)");
 
 cell tIPv4RoutingTable IPv4RoutingTable {
 
@@ -257,6 +261,12 @@ cell tIfMbedPhyTaskBody IfMbedPhyTaskBody {
 /*
 *   Adapters
 */
+cell tTCPAPIAdapter TCPAPIAdapter {
+
+    cTCPAPI4 = TCPCEP_000.eAPI;
+    cREP4_000 = REP4_000.eREP4;
+};
+
 cell tIfMbedAdapter IfMbedAdapter {
 
 	cNicDriver = IfMbed.eNicDriver;
