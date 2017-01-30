@@ -10,7 +10,7 @@
  * tecsmerge によるマージに使用されます
  *
  * 属性アクセスマクロ #_CAAM_#
- * name             char*            ATTR_name       
+ * name             char*            ATTR_name
  *
  * 呼び口関数 #_TCPF_#
  * call port: cREP signature: sREP4 context:task
@@ -49,7 +49,7 @@
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 void
-eRepSelector_getRep(CELLIDX idx, Descriptor( sREP4 )* rep, int_t i)
+eRepSelector_getRep(CELLIDX idx, Descriptor( sREP4 )* desc, int_t i)
 {
 	CELLCB	*p_cellcb;
 	if (VALID_IDX(idx)) {
@@ -60,7 +60,7 @@ eRepSelector_getRep(CELLIDX idx, Descriptor( sREP4 )* rep, int_t i)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-		*rep = cREP_refer_to_descriptor(i);
+	*desc = cREP_refer_to_descriptor(i);
 }
 
 /* #[<ENTRY_FUNC>]# eRepSelector_getNRep
@@ -81,7 +81,6 @@ eRepSelector_getNRep(CELLIDX idx, int_t* n)
 
 	/* ここに処理本体を記述します #_TEFB_# */
 	*n = NCP_cREP;
-
 }
 
 /* #[<POSTAMBLE>]#

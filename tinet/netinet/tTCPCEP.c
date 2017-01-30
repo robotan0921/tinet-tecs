@@ -237,6 +237,7 @@
 #define T_TCP_IP4_Q_HDR T_IP4_TCP_Q_HDR 	// TEMP
 
 //TODO:
+#if 0
 /* 動的結合 */
 //本当はカーネルの機能に組み込むがmikan
 
@@ -266,33 +267,39 @@ get_tTask_DES()
 }
 
 
-//TODO: #define tTCPCEP_cCallingSendTask_bind(p_that) \
+#define tTCPCEP_cCallingSendTask_bind(p_that) \
   (p_that)->cCallingSendTask = get_tTask_DES()
+#define cCallingSendTask_bind() tTCPCEP_cCallingSendTask_bind(p_cellcb)
+
+#define tTCPCEP_cCallingReceiveTask_bind(p_that) \
+  (p_that)->cCallingReceiveTask = get_tTask_DES()
+#define cCallingReceiveTask_bind() tTCPCEP_cCallingReceiveTask_bind(p_cellcb)
+//mikanここまで
+
+#define sREP4_entrypoint intptr_t//シグニチャ用につけられる
+#define sREP4_cREP4_bind(des) ((p_cellcb)->cREP4 = (struct tag_sREP4_VDES *)(des))
+#define sREP4_cREP4_unbind() ((p_cellcb)->cREP4 = NULL)
+#define sTask_cCallingSendTask_bind(des) ((p_cellcb)->cCallingSendTask = (struct tag_sTask_VDES *)(des))
+#define sTask_cCallingSendTask_unbind() ((p_cellcb)->cCallingSendTask = NULL)
+#define sTask_cCallingReceiveTask_bind(des) ((p_cellcb)->cCallingReceiveTask = (struct tag_sTask_VDES *)(des))
+#define sTask_cCallingReceiveTask_unbind() ((p_cellcb)->cCallingReceiveTask = NULL)
+/* dynamic conecction */
+#endif /* of #if 0 */
+
 #define tTCPCEP_cCallingSendTask_bind(p_that)
-//TODO: #define cCallingSendTask_bind() tTCPCEP_cCallingSendTask_bind(p_cellcb)
 #define cCallingSendTask_bind()
 
-//TODO: #define tTCPCEP_cCallingReceiveTask_bind(p_that) \
-  (p_that)->cCallingReceiveTask = get_tTask_DES()
 #define tTCPCEP_cCallingReceiveTask_bind(p_that)
-//TODO: #define cCallingReceiveTask_bind() tTCPCEP_cCallingReceiveTask_bind(p_cellcb)
 #define cCallingReceiveTask_bind()
 //mikanここまで
 
 #define sREP4_entrypoint intptr_t//シグニチャ用につけられる
-//TODO: #define sREP4_cREP4_bind(des) ((p_cellcb)->cREP4 = (struct tag_sREP4_VDES *)(des))
 #define sREP4_cREP4_bind(des)
-//TODO: #define sREP4_cREP4_unbind() ((p_cellcb)->cREP4 = NULL)
 #define sREP4_cREP4_unbind()
-//TODO: #define sTask_cCallingSendTask_bind(des) ((p_cellcb)->cCallingSendTask = (struct tag_sTask_VDES *)(des))
 #define sTask_cCallingSendTask_bind(des)
-//TODO: #define sTask_cCallingSendTask_unbind() ((p_cellcb)->cCallingSendTask = NULL)
 #define sTask_cCallingSendTask_unbind()
-//TODO: #define sTask_cCallingReceiveTask_bind(des) ((p_cellcb)->cCallingReceiveTask = (struct tag_sTask_VDES *)(des))
 #define sTask_cCallingReceiveTask_bind(des)
-//TODO: #define sTask_cCallingReceiveTask_unbind() ((p_cellcb)->cCallingReceiveTask = NULL)
 #define sTask_cCallingReceiveTask_unbind()
-/* dynamic conecction */
 
 /*
  *  関数
@@ -1171,7 +1178,7 @@ eCEPInput_notify(CELLIDX idx, ER error)
  *  tcp_acp_cep -- 接続要求待ち (受動オープン)【標準機能】
  */
 ER
-eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
+eAPI_accept(CELLIDX idx, Descriptor( sREP4 ) desc, uint16_t* dstport, TMO tmout)
 {
 	ER		ercd = E_OK;
 	CELLCB	*p_cellcb;
@@ -1183,7 +1190,8 @@ eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	ER			error;
+	syslog(LOG_EMERG, "Debug: eAPI_accept");
+    ER			error;
 	FLGPTN		flag;
 	T_IN4_ADDR 	my4addr;
 	T_IPV4EP 	ep4;
@@ -1261,7 +1269,8 @@ eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 
 	/* TCP 受付口を得る。*/
 	// rep = GET_TCP_REP(repid);
-	sREP4_cREP4_bind(sREP4);
+	// sREP4_cREP4_bind(sREP4);
+    cREP4_set_descriptor(desc);
 
 #ifdef TCP_CFG_EXTENTIONS
 
@@ -1273,7 +1282,7 @@ eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 		syscall(sig_sem(rep->semid_lock));
 		error = E_NOEXS;
 		goto err_ret;
-		}
+	}
 
 #endif	/* of #ifdef TCP_CFG_EXTENTIONS */
 
@@ -1306,7 +1315,7 @@ eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 #endif 	/* of #if 0 */
 
 	/* TCP 受付口のアドレスをコピーする。*/
-	if(ATTR_ipLength == 4){
+	if(ATTR_ipLength == 4) {
 		ep4 = cREP4_getEndpoint();
 		cGetAddress_setMy4Address(ep4.ipaddr);
 	}
@@ -1373,6 +1382,10 @@ eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
 
+    // cEstFlag_set(TCP_CEP_EVT_ESTABLISHED); //TODO:
+    T_RFLG rflg;
+    cEstFlag_refer(&rflg);
+    syslog(LOG_EMERG, "Debug: flgptn = 0x%0x", rflg.flgptn);
 		/*
 		 *  FSM が ESTABLISHED になるまで待つ。
 		 *  FSM が CLOSED になった場合は、エラーが発生したことを意味している。
@@ -1403,7 +1416,8 @@ eAPI_accept(CELLIDX idx, intptr_t sREP4, uint16_t* dstport, TMO tmout)
 			 *  通信端点から受付口を解放し、
 			 *  イベントフラグをクローズに設定する。
 			 */
-			sREP4_cREP4_unbind();
+			//sREP4_cREP4_unbind();
+            cREP4_unjoin();
 			// cep->rep = NULL;
 #if 0
 #if defined(_IP6_CFG) && defined(_IP4_CFG)
@@ -1587,6 +1601,7 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+    syslog(LOG_EMERG, "Debug: [1]");
 	ER_UINT		error;
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
@@ -1610,10 +1625,12 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 	 */
 	if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_RCV_DAT)) != E_OK)
 		return error;
+    syslog(LOG_EMERG, "Debug: [2]");
 
 	/* 受信できるか、通信端点の状態を見る。*/
 	if (tecs_tcp_can_recv_more(&error, p_cellcb, TFN_TCP_RCV_DAT, tmout) != E_OK)
 		goto err_ret;
+    syslog(LOG_EMERG, "Debug: [3]");
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
 
@@ -1651,12 +1668,15 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 		if ((error = tecs_tcp_wait_rwbuf(p_cellcb, tmout)) != E_OK)
 			goto err_ret;
 
+    syslog(LOG_EMERG, "Debug: [4]");
 		/* 受信ウィンドバッファからデータを取り出す。*/
 		error = cCopySave_tcpReadRwbuf(&VAR_cep, data, len, VAR_rbuf, VAR_rbufSize);
 
+    syslog(LOG_EMERG, "Debug: [5]");
 		/* 相手にウィンドウサイズが変わったことを知らせるため出力をポストする。*/
 		VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
 		cSemaphoreTcppost_signal();
+    syslog(LOG_EMERG, "Debug: [6]");
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
 
@@ -1666,6 +1686,7 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 #endif 	/* of #if 0 */
 
 err_ret:
+    syslog(LOG_EMERG, "Debug: [7]");
 	VAR_cep.rcv_tskid = TA_NULL;
 	sTask_cCallingReceiveTask_unbind();
 	VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
@@ -2615,8 +2636,13 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 	 *  受信できるか、fsm_state を見る。受信できない場合は
 	 *  長さ 0、またはエラーを返す。
 	 */
+    syslog(LOG_EMERG, "Debug: **1**");
+    syslog(LOG_EMERG, "Debug: VAR_cep.fsm_state = %d", VAR_cep.fsm_state);
+    syslog(LOG_EMERG, "Debug: VAR_cep.rwbuf_count = %d", VAR_cep.rwbuf_count);
+    syslog(LOG_EMERG, "Debug: VAR_cep.reassq = %d", VAR_cep.reassq);
 	if (!TCP_FSM_CAN_RECV_MORE(VAR_cep.fsm_state) &&
 	    VAR_cep.rwbuf_count == 0 && VAR_cep.reassq == NULL) {
+    syslog(LOG_EMERG, "Debug: **2**");
 		*error = VAR_cep.error;
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
@@ -2648,12 +2674,14 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 		cCopySave_tcpFreeRwbufq(&VAR_cep);
 		cSemaphore_signal();
 
+    syslog(LOG_EMERG, "Debug: **3**");
 		return E_OBJ;
 	}
 	else {
 
 #ifndef TCP_CFG_RWBUF_CSAVE
 
+    syslog(LOG_EMERG, "Debug: **4**");
 		if (!IS_PTR_DEFINED(VAR_rbuf)) {
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
@@ -2679,6 +2707,7 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
 
+    syslog(LOG_EMERG, "Debug: **5**");
 				*error = E_OBJ;
 
 			return E_OBJ;
@@ -2686,6 +2715,7 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 
 #endif	/* of #ifndef TCP_CFG_RWBUF_CSAVE */
 
+    syslog(LOG_EMERG, "Debug: **6**");
 		return E_OK;
 	}
 }

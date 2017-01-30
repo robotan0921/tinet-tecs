@@ -12,6 +12,8 @@ celltype tApplicationBody {
     call sREP4 cREP4_000;
     // call sREP4 cREP4_001;
 
+    call sRepSelector cRepSelector;
+
     entry sTaskBody eTaskBody;
 };
 

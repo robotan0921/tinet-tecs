@@ -40,7 +40,7 @@
  *   ER             changeInterruptPriorityMask( PRI interruptPriority );
  *   ER             getInterruptPriorityMask( PRI* p_interruptPriority );
  * call port: cTCPAPI4 signature: sTCPCEPAPI4 context:task
- *   ER             cTCPAPI4_accept( intptr_t sREP4, T_IPV4EP* dstep4, TMO tmout );
+ *   ER             cTCPAPI4_accept( Descriptor( sREP4 ) desc, T_IPV4EP* dstep4, TMO tmout );
  *   ER             cTCPAPI4_connect( T_IN4_ADDR myaddr, uint16_t myport, T_IN4_ADDR dstaddr, uint16_t dstport, TMO tmout );
  *   ER_UINT        cTCPAPI4_send( const int8_t* data, int32_t len, TMO tmout );
  *   ER_UINT        cTCPAPI4_receive( int8_t* data, int32_t len, TMO tmout );
@@ -55,6 +55,9 @@
  *   ER             cREP4_000_waitTimeout( TMO timeout );
  *   ER             cREP4_000_initialize( );
  *   ER             cREP4_000_refer( T_RSEM* pk_semaphoreStatus );
+ * call port: cRepSelector signature: sRepSelector context:task
+ *   void           cRepSelector_getRep( Descriptor( sREP4 )* desc, int_t i );
+ *   void           cRepSelector_getNRep( int_t* n );
  *
  * #[</PREAMBLE>]# */
 
@@ -95,6 +98,8 @@ eTaskBody_main()
 	ER		error = E_OK;
 	uint32_t i;
 	int8_t data[NUM_SEND_DATA];
+	T_IPV4EP dstep4;
+    Descriptor(sREP4) desc;
 
 	getTaskId(&tskid);
 	syslog(LOG_EMERG, "Application started!! [ID:%d]", tskid);
@@ -105,9 +110,10 @@ eTaskBody_main()
 	T_IN4_ADDR myaddr  = MYIP4ADDRESS;
 	T_IN4_ADDR dstaddr = MAKE_IPV4_ADDR(192,168,1,56);
 
-	T_IPV4EP dstep4;
-
-	error = cTCPAPI4_accept(0, &dstep4, TMO_FEVR );
+    cRepSelector_getRep(&desc, 0);
+	error = cTCPAPI4_accept(desc, &dstep4, TMO_FEVR);
+	syslog(LOG_EMERG, "Debug: ipaddr = 0x%x", dstep4.ipaddr);
+	syslog(LOG_EMERG, "Debug: portno = 0x%x", dstep4.portno);
 
 	while((rlen = cTCPAPI4_receive(data, 100, TMO_FEVR)) > 0) {
 		data[20] = '\0';
@@ -117,7 +123,6 @@ eTaskBody_main()
 	syslog(LOG_EMERG, "rlen = %d", rlen);
 
 	syslog(LOG_EMERG, "Application ended!! [ID:%d]", tskid);
-	exitKernel();
 }
 
 /* #[<POSTAMBLE>]#

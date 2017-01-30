@@ -36,6 +36,7 @@ cell tApplicationBody ApplicationBody {
     // cUDPAPI4 = UDPCEP_000.eAPI;
     cREP4_000 = REP4_000.eREP4;
     // cREP4_001 = REP4_001.eREP4;
+    cRepSelector = RepSelector.eRepSelector;
 };
 
 cell tTask ApplicationTask {

@@ -188,7 +188,7 @@ ifdef USE_CXX
 	APPL_CXXOBJS := sample1n.o sample1.o
 	APPL_COBJS :=
 else
-	APPL_COBJS := sample1n.o sample1.o
+	APPL_COBJS :=
 endif
 APPL_COBJS := $(APPL_COBJS) log_output.o vasyslog.o t_perror.o strerror.o
 APPL_CFLAGS := $(APPL_CFLAGS)

@@ -46,7 +46,7 @@ composite tREP4 {
 };
 
 signature sRepSelector {
-    void  getRep([out]Descriptor(sREP4) *rep, [in]int_t i);
+    void  getRep([out]Descriptor(sREP4) *desc, [in]int_t i);
     void  getNRep([out]int_t *n);
 };
 

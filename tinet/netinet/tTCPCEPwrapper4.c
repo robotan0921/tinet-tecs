@@ -47,7 +47,7 @@
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
 ER
-eAPI4_accept(CELLIDX idx,sREP4_des sREP4, T_IPV4EP* dstep4, TMO tmout)
+eAPI4_accept(CELLIDX idx, Descriptor( sREP4 ) desc, T_IPV4EP* dstep4, TMO tmout)
 {
 	ER		ercd = E_OK;
 	CELLCB	*p_cellcb;
@@ -65,7 +65,7 @@ eAPI4_accept(CELLIDX idx,sREP4_des sREP4, T_IPV4EP* dstep4, TMO tmout)
 	if (dstep4 == NULL || tmout == TMO_NBLK)
 	  return E_PAR;
 
-	if((ercd = cAPI_accept(sREP4, &dstport, tmout )) == E_OK){
+	if((ercd = cAPI_accept(desc, &dstport, tmout )) == E_OK){
 		dstep4->ipaddr = VAR_dstaddr;
 		dstep4->portno = dstport;
 	}

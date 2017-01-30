@@ -2,7 +2,7 @@ import_C("netinet/tecs_tcp_var.h");
 
 
 signature sTCPCEPAPI4 {
-    ER      accept([in]intptr_t sREP4, [out]T_IPV4EP *dstep4, [in]TMO tmout);
+    ER      accept([in]Descriptor(sREP4) desc, [out]T_IPV4EP *dstep4, [in]TMO tmout);
     ER      connect([in]T_IN4_ADDR myaddr, [in]uint16_t myport, [in]T_IN4_ADDR dstaddr, [in]uint16_t dstport, [in]TMO tmout);
     ER_UINT send([in,size_is(len)]const int8_t *data, [in]int32_t len, [in]TMO tmout);
     ER_UINT receive([out,size_is(len)]int8_t *data, [in]int32_t len, [in]TMO tmout);
@@ -12,7 +12,7 @@ signature sTCPCEPAPI4 {
 };
 
 signature sTCPCEPAPI {
-    ER      accept([in]intptr_t sREP4, [out]uint16_t *dstport, [in]TMO tmout);
+    ER      accept([in]Descriptor(sREP4) desc, [out]uint16_t *dstport, [in]TMO tmout);
     ER      connect([in,size_is(addrlen)]const int8_t *myaddr, [in]uint16_t myport,
                     [in,size_is(addrlen)]const int8_t *dstaddr, [in]uint16_t dstport, [in]int32_t addrlen, [in]TMO tmout);
     ER_UINT send([in,size_is(len)]const int8_t *data, [in]int32_t len, [in]TMO tmout);
