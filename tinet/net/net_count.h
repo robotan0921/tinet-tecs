@@ -260,7 +260,8 @@ extern T_NET_COUNT	net_count_loop;
 
 #if NET_COUNT_ENABLE & PROTO_FLG_ETHER
 
-#define NET_COUNT_ETHER(v,c)	((v)+=(c))
+// #define NET_COUNT_ETHER(v,c)	((v)+=(c))
+#define NET_COUNT_ETHER(v,c)
 
 #ifndef _MACRO_ONLY
 
@@ -292,7 +293,8 @@ extern T_NET_COUNT	net_count_ether;
 #define NC_ETHER_NIC_IN_OCTETS		11	/* 受信オクテット数		*/
 #define NC_ETHER_NIC_SIZE		12	/* カウンタ数			*/
 
-#define NET_COUNT_ETHER_NIC(v,c)	((v)+=(c))
+// #define NET_COUNT_ETHER_NIC(v,c)	((v)+=(c))
+#define NET_COUNT_ETHER_NIC(v,c)
 
 #ifndef _MACRO_ONLY
 
@@ -312,7 +314,8 @@ extern T_NET_COUNT_VAL net_count_ether_nic[NC_ETHER_NIC_SIZE];
 
 #if NET_COUNT_ENABLE & PROTO_FLG_NET_BUF
 
-#define NET_COUNT_NET_BUF(v,c)		((v)+=(c))
+// #define NET_COUNT_NET_BUF(v,c)		((v)+=(c))
+#define NET_COUNT_NET_BUF(v,c)
 
 #else	/* of #if NET_COUNT_ENABLE & PROTO_FLG_NET_BUF */
 
@@ -326,7 +329,8 @@ extern T_NET_COUNT_VAL net_count_ether_nic[NC_ETHER_NIC_SIZE];
 
 #if NET_COUNT_ENABLE & PROTO_FLG_ARP
 
-#define NET_COUNT_ARP(v,c)	((v)+=(c))
+// #define NET_COUNT_ARP(v,c)	((v)+=(c))
+#define NET_COUNT_ARP(v,c)
 
 #ifndef _MACRO_ONLY
 
@@ -366,7 +370,8 @@ extern T_NET_COUNT	net_count_arp;
 #define NC_IP4_IN_OCTETS		19	/* 受信オクテット数		*/
 #define NC_IP4_SIZE			20	/* カウンタ数			*/
 
-#define NET_COUNT_IP4(v,c)	((v)+=(c))
+// #define NET_COUNT_IP4(v,c)	((v)+=(c))
+#define NET_COUNT_IP4(v,c)
 
 #ifndef _MACRO_ONLY
 
@@ -384,7 +389,8 @@ extern T_NET_COUNT_VAL net_count_ip4[NC_IP4_SIZE];
 
 #if NET_COUNT_ENABLE & PROTO_FLG_ICMP4
 
-#define NET_COUNT_ICMP4(v,c)	((v)+=(c))
+// #define NET_COUNT_ICMP4(v,c)	((v)+=(c))
+#define NET_COUNT_ICMP4(v,c)
 
 #ifndef _MACRO_ONLY
 
@@ -542,7 +548,8 @@ extern T_NET_COUNT_VAL	net_count_nd6[NC_ND6_SIZE];
 #define NC_TCP_RECV_OCTETS		23	/* 受信オクテット数		*/
 #define NC_TCP_SIZE			24	/* カウンタ数			*/
 
-#define NET_COUNT_TCP(v,c)	((v)+=(c))
+// #define NET_COUNT_TCP(v,c)	((v)+=(c))
+#define NET_COUNT_TCP(v,c)
 
 #ifndef _MACRO_ONLY
 
@@ -586,7 +593,8 @@ extern T_NET_COUNT	net_count_udp;
  *  SNMP の 管理情報ベース (MIB)
  */
 
-#define NET_COUNT_MIB(v, c)		((v)+=(c))
+// #define NET_COUNT_MIB(v, c)		((v)+=(c))
+#define NET_COUNT_MIB(v, c)
 
 #else	/* of #ifdef SUPPORT_MIB */
 

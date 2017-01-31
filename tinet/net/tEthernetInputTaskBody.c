@@ -168,11 +168,12 @@ eTaskBody_main(CELLIDX idx)
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*input;
 	T_ETHER_HDR	*eth;
-	ID		tskid;
+	ID			tskid;
 	uint16_t	proto;
 	uint8_t		rcount = 0;
-	int32_t size;
+	int32_t 	size;
 	uint8_t macaddress[6];
+	T_OFF_BUF etheroff = {0, 0, 0, ETHER_HDR_SIZE, ETHER_MTU, NETBUFFER_ALIGN, FLAG_USE_ETHER, 0, 0};
 
 	/* ネットワークインタフェース管理を初期化する。*/
 	ifinit();
@@ -194,7 +195,7 @@ eTaskBody_main(CELLIDX idx)
 
 	/* Ethernet 出力タスクを起動する */
 	if( is_cTaskEthernetOutput_joined() )
-		cTaskEthernetOutput_activate( );
+		cTaskEthernetOutput_activate();
 
 	/* ネットワークタイマタスクを起動する */
 	syscall(act_tsk(NET_TIMER_TASK));
@@ -225,6 +226,7 @@ eTaskBody_main(CELLIDX idx)
 			NET_COUNT_ETHER(net_count_ether.in_octets,  input->len);
 			NET_COUNT_MIB(if_stats.ifInOctets, input->len + 8);
 			NET_COUNT_ETHER(net_count_ether.in_packets, 1);
+			input->off = etheroff;
 			eth = GET_ETHER_HDR(input);
 			proto = ntohs(eth->type);
 
@@ -237,17 +239,17 @@ eTaskBody_main(CELLIDX idx)
 #endif	/* of #ifdef ETHER_CFG_COLLECT_ADDR */
 
 				net_srand(0);
-				}
+			}
 			rcount ++;
 
 
 #ifdef SUPPORT_MIB
 			if ((*eth->dhost & ETHER_MCAST_ADDR) == 0) {
 				NET_COUNT_MIB(if_stats.ifInUcastPkts, 1);
-				}
+			}
 			else {
 				NET_COUNT_MIB(if_stats.ifInNUcastPkts, 1);
-				}
+			}
 #endif	/* of #ifdef SUPPORT_MIB */
 
 #if defined(_IP4_CFG) && defined(ETHER_CFG_ACCEPT_ALL)
@@ -267,7 +269,7 @@ eTaskBody_main(CELLIDX idx)
 				NET_COUNT_MIB(if_stats.ifInErrors, 1);
 				syscall(rel_net_buf(input));
 				continue;
-				}
+			}
 
 #endif	/* of #if defined(_IP4_CFG) && defined(ETHER_CFG_ACCEPT_ALL) */
 

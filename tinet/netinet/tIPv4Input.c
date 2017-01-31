@@ -139,14 +139,22 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	T_NET_BUF *input = (T_NET_BUF*)inputp;
+	T_NET_BUF 	*input = (T_NET_BUF*)inputp;
 
-	T_IP4_HDR	*ip4h;
+	T_IP4_HDR 	*ip4h = GET_IP4_HDR(input);
+	//TODO: T_IP4_HDR 	*ip4h = GET_IP4_HDR(input, input->off.ifhdrlen);
 	T_IFNET		*ifp = IF_GET_IFNET();
 	T_IN4_ADDR	dst, src, bc;
-	//TODO: T_IN4_ADDR addr = cFunctions_getIPv4Address();
-	//TODO: T_IN4_ADDR mask = cFunctions_getIPv4Mask();
-	uint_t		hlen, off;
+	T_IN4_ADDR 	addr = cFunctions_getIPv4Address();
+	T_IN4_ADDR 	mask = cFunctions_getIPv4Mask();
+	uint_t		off;
+	uint32_t 	hlen = GET_IP4_HDR_SIZE(input);
+
+	/* バッファ情報のセット */
+	input->off.protocolflag |= FLAG_USE_IPV4;
+	input->off.iphdrlen 	= IP4_HDR_SIZE;
+	input->off.ipmss 		= TCP_MSS;
+	input->off.iphdrlenall 	= hlen;
 
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_OCTETS], input->len - IF_HDR_SIZE);
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_PACKETS], 1);
@@ -157,50 +165,47 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_SHORT], 1);
 		NET_COUNT_MIB(ip_stats.ipInHdrErrors, 1);
 		goto buf_rel;
-		}
-
-	ip4h = GET_IP4_HDR(input);
-	hlen = GET_IP4_HDR_SIZE(input);
+	}
 
 	/* バージョンをチェックする。*/
 	if (IP4_VHL_V(ip4h->vhl) != IPV4_VERSION) {
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_VER], 1);
 		NET_COUNT_MIB(ip_stats.ipInHdrErrors, 1);
 		goto buf_rel;
-		}
+	}
 
 	/* IP ヘッダの長さをチェックし、オプションを解析する。*/
 	if (hlen > IP4_HDR_SIZE) {
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_OPTS], 1);
 		/* %%% オプションの解析 %%% */
-		}
+	}
 
 	/* データグラム長をチェックする。*/
 	if (ntohs(ip4h->len) > input->len - IF_HDR_SIZE) {
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_SHORT], 1);
 		NET_COUNT_MIB(ip_stats.ipInHdrErrors, 1);
 		goto buf_rel;
-		}
+	}
 
 	/* ネットワークバッファの長さをデータグラム長に調整する。*/
 	input->len = (uint16_t)(ntohs(ip4h->len) + IF_HDR_SIZE);
+	size = input->len + sizeof(T_NET_BUF) - 4;
 
 	/* チェックサムをチェックする。*/
 	if (cFunctions_checkSum(ip4h, hlen) != 0) {
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_CKSUM], 1);
 		NET_COUNT_MIB(ip_stats.ipInHdrErrors, 1);
 		goto buf_rel;
-		}
+	}
 
 	/* IP ヘッダの長さをチェックし、上位が ICMP 以外はオプションを消去する。*/
 	if (hlen > IP4_HDR_SIZE && ip4h->proto != IPPROTO_ICMP) {
 		memset((uint8_t*)ip4h + IP4_HDR_SIZE, 0, hlen - IP4_HDR_SIZE);
-		}
+	}
 
 	/* 送信元アドレスをチェックする。*/
 	src = ntohl(ip4h->src);
-	bc  = (ifp->in4_ifaddr.addr & ifp->in4_ifaddr.mask) | ~ifp->in4_ifaddr.mask;
-	//TODO: bc  = (addr & mask) | ~mask;
+	bc  = (addr & mask) | ~mask;
 
 #ifdef SUPPORT_LOOP
 
@@ -208,7 +213,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_ADDR], 1);
 		NET_COUNT_MIB(ip_stats.ipInAddrErrors, 1);
 		goto buf_rel;
-		}
+	}
 
 #else	/* of #ifdef SUPPORT_LOOP */
 
@@ -216,7 +221,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_ADDR], 1);
 		NET_COUNT_MIB(ip_stats.ipInAddrErrors, 1);
 		goto buf_rel;
-		}
+	}
 
 #endif	/* of #ifdef SUPPORT_LOOP */
 
@@ -239,7 +244,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_ADDR], 1);
 		NET_COUNT_MIB(ip_stats.ipInAddrErrors, 1);
 		goto buf_rel;
-		}
+	}
 #else
 	if ((ifp->in4_ifaddr.addr != IPV4_ADDRANY) &&
 	    (!(dst == ifp->in4_ifaddr.addr || dst == bc ||
@@ -247,7 +252,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_ADDR], 1);
 		NET_COUNT_MIB(ip_stats.ipInAddrErrors, 1);
 		goto buf_rel;
-		}
+	}
 #endif
 
 #else	/* of #ifdef DHCP_CFG */
@@ -259,14 +264,14 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_ADDR], 1);
 		NET_COUNT_MIB(ip_stats.ipInAddrErrors, 1);
 		goto buf_rel;
-		}
+	}
 #else
 	if (!(dst == ifp->in4_ifaddr.addr || dst == bc ||
 	      dst == IPV4_ADDR_BROADCAST  || dst == IPV4_ADDRANY)) {
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_ADDR], 1);
 		NET_COUNT_MIB(ip_stats.ipInAddrErrors, 1);
 		goto buf_rel;
-		}
+	}
 #endif
 
 #endif	/* of #ifdef DHCP_CFG */
@@ -277,7 +282,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 	if (ntohs(ip4h->flg_off) & (IP4_MF | IP4_OFFMASK)) {
 		if ((input = ip_reass(ip4h, input)) == NULL)
 			return;
-		}
+	}
 
 #else	/* of #ifdef IP4_CFG_FRAGMENT */
 
@@ -288,7 +293,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_MIB(ip_stats.ipReasmReqds, 1);
 		if ((ntohs(ip4h->flg_off) & IP4_OFFMASK) == 0) {
 			NET_COUNT_MIB(ip_stats.ipReasmFails, 1);
-			}
+		}
 		src = ntohl(ip4h->src);
 		syslog(LOG_WARNING, "[IP] flaged src: %s.", ip2str(NULL, &src));
 		goto buf_rel;
@@ -310,18 +315,19 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 
 #if defined(SUPPORT_TCP)
 	case IPPROTO_TCP:
-	//TODO: if(is_cTCPInput_joined()){
-		NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
-		tcp_input(&input, &off, NULL);
-		//TODO: cTCPInput_TCPInput(inputp, size, (int8_t*)&dst, (int8_t*)&src, 4);
-		return;
+		if (is_cTCPInput_joined()) {
+			NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
+			syslog(LOG_EMERG,"*********TCP INPUT ENTRY ********* ");
+			cTCPInput_TCPInput(inputp, size, (int8_t*)&dst, (int8_t*)&src, 4);
+			return;
+		}
 		break;
 #endif	/* of #if defined(SUPPORT_TCP) */
 
 #if defined(SUPPORT_UDP) && ( (TNUM_UDP4_CEPID > 0) || \
                              ((TNUM_UDP6_CEPID > 0) && defined(API_CFG_IP4MAPPED_ADDR)))
 	case IPPROTO_UDP:
-	//TODO: if(is_cUDPInput_joined()){
+	//TODO: if (is_cUDPInput_joined()) {
 		NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
 		udp4_input(&input, &off, NULL);
 		//TODO: cUDPInput_UDPInput(inputp, size, (int8_t *)&dst,4 );//dstはホストオーダ順で入っている[0]=200 [1]=1 [2]=168 [3]=192//offmikan
@@ -330,7 +336,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 #endif	/* of #if defined(SUPPORT_UDP) && TNUM_UDP4_CEPID > 0 */
 
 	case IPPROTO_ICMP:
-		//TODO: if(is_cICMP4_joined()){
+		//TODO: if (is_cICMP4_joined()) {
 		NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
 		cICMP4_input(inputp, off);	//TODO: off = size ??
 		return;
@@ -365,13 +371,13 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 			syslog(LOG_INFO, "[IP] unexp proto: %d, src=%s.", ip4h->proto, ip2str(NULL, &src));
 			icmp_error(ICMP4_UNREACH_PROTOCOL, input);
 			//TODO: cICMP4Error_error(inputp,size,ICMP4_UNREACH_PROTOCOL);
-			}
+		}
 		/*
 		 *  icmp_error では、ネットワークバッファ input を返却しないので
 		 *  開放してから終了する。
 		 */
 		break;
-		}
+	}
 
 buf_rel:
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_PACKETS], 1);

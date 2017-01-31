@@ -9,6 +9,8 @@
 
 #define ETHER_HDR_SIZE (sizeof(T_ETHER_HDR))
 
+#define ETHER_MTU 1500
+
 #ifndef T_IN4_ADDR_DEFINED
 
 typedef uint32_t T_IN4_ADDR;

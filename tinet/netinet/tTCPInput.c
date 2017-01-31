@@ -140,7 +140,6 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	uint16_t	seglen;
 	int32_t 	offset;
 	uint32_t 	ix;
-	uint_t 		*offp = size;
 
 #if defined(NUM_TCP_TW_CEP_ENTRY) && NUM_TCP_TW_CEP_ENTRY > 0
 	T_TCP_TWCEP	*twcep;
@@ -156,9 +155,9 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	input->off.tphdrlen = TCP_HDR_SIZE;
 	offset = input->off.ifhdrlen + input->off.iphdrlenall;
 
-	syslog(LOG_EMERG, "packet length = %d",input->len);
-	syslog(LOG_EMERG, "ifhdrlen = %d",input->off.ifhdrlen);
-	syslog(LOG_EMERG, "iphdrlenall = %d",input->off.iphdrlenall);
+	syslog(LOG_EMERG, "packet length = %d", input->len);
+	syslog(LOG_EMERG, "ifhdrlen = %d", input->off.ifhdrlen);
+	syslog(LOG_EMERG, "iphdrlenall = %d", input->off.iphdrlenall);
 
 	/* ヘッダ長をチェックする。*/
 	if (input->len < IF_IP_TCP_HDR_SIZE(input)) {
@@ -166,30 +165,22 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 		goto drop;
 	}
 
-	tcph = GET_TCP_HDR(input, *offp);
-	//TODO: tcph = GET_TCP_HDR(input, offset);
+	tcph = GET_TCP_HDR(input, offset);
 
-	seglen  = input->len - *offp;				/* TCP のセグメント長 */
 	//TODO: seglen  = input->len - (offset - input->off.ifalign);				/* TCP のセグメント長 */
+	seglen  = input->len - offset;				/* TCP のセグメント長 */
 
-	if (IN_CKSUM(input, IPPROTO_TCP, *offp, (uint_t)seglen) != 0) {
-		NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_BAD_CKSUMS], 1);
-		goto drop;
-	}
-	//TODO:
-	/*
-	if((input->off.protocolflag & FLAG_USE_IPV4) && is_cIPv4CheckSum_joined()){
-		if (cIPv4CheckSum_ipv4CheckSum(inputp, size, offset, IPPROTO_TCP) != 0){
+	if ((input->off.protocolflag & FLAG_USE_IPV4) && is_cIPv4CheckSum_joined()) {
+		if (cIPv4CheckSum_ipv4CheckSum(inputp, size, offset, IPPROTO_TCP) != 0) {
 			syslog(LOG_EMERG, "TCP packets are Droped when check sum!" );
 			goto drop;
 		}
 	}
-	*/
 
 	/* TCP ヘッダ長をチェックする。*/
 	if (TCP_HDR_LEN(tcph->doff) < TCP_HDR_SIZE || TCP_HDR_LEN(tcph->doff) > seglen) {
 		NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_BAD_HEADERS], 1);
-		syslog(LOG_EMERG, "TCP packets are Droped when length!\n");
+		syslog(LOG_EMERG, "TCP packets are Droped when length!");
 		goto drop;
 	}
 	tcph->sum = seglen - TCP_HDR_LEN(tcph->doff);		/* ここから tcph->sum は TCP の SDU 長 */
@@ -223,7 +214,7 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	}
 
 	/* CEPがなかった処理 */
-	syslog(LOG_EMERG, "CEP Lost... seq :%d  ack:%d .",tcph->seq,tcph->ack);
+	syslog(LOG_EMERG, "CEP Lost... seq :%d  ack:%d .", tcph->seq, tcph->ack);
 
 //reset_drop:
 	/*

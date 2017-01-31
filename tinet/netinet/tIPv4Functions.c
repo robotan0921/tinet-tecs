@@ -132,8 +132,8 @@ eCheckSum_ipv4CheckSum(int8_t* data, int32_t size, uint32_t offset, uint8_t prot
 	//TODO: オフセットの情報を引数に加える
 	//iphdr = GET_IP4_HDR(input, input->off.ifhdrlen);
 	iphdr = GET_IP4_HDR(input);
-	//uint32_t len = input->len - offset + input->off.ifalign;
-	uint_t len = GET_IP4_HDR_SIZE(input); //TODO
+	//TODO: uint32_t len = input->len - offset + input->off.ifalign;
+	uint32_t len = input->len - offset;
 
 	/* 4 オクテット境界のデータ長 */
 	align = (len + 3) >> 2 << 2;
@@ -141,16 +141,11 @@ eCheckSum_ipv4CheckSum(int8_t* data, int32_t size, uint32_t offset, uint8_t prot
 	/* 4 オクテット境界までパディングで埋める。*/
 	if (align > len)
 		memset((uint8_t*)input->buf + offset + len, 0, (size_t)(align - len));
-		//memset((uint8_t*)nbuf->buf + off + len, 0, (size_t)(align - len));
 
 	sum = in_cksum_sum(input->buf + offset, align)
 	    + in_cksum_sum(&(iphdr->src), sizeof(T_IN4_ADDR) * 2)
 	    + len + proto;
 
-	//sum = in_cksum_sum(input->buf + offset, align)
-	//    + in_cksum_sum(&(iphdr->src), sizeof(T_IN4_ADDR) * 2)
-//	    + input->len - offset + proto;
-	//	  +len + proto;
 	sum = in_cksum_carry(sum);
 
 	return (uint16_t)(~htons((uint16_t)sum));
