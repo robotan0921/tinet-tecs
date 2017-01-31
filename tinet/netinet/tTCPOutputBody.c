@@ -161,8 +161,7 @@ eTaskBody_main(CELLIDX idx)
 	while (true) {
 
 		/* 出力がポストされるまで待つ。*/
-		syscall(wai_sem(SEM_TCP_POST_OUTPUT));
-		//TODO: cSemaphore_wait();
+		cSemaphoreTcppost_wait();
 
 		if (++ last_ix == NCP_cTCPOutputStart)
 			last_ix = 0;

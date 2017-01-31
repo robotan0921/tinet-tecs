@@ -111,7 +111,7 @@ celltype tTCPOutputBody {
     [optional]call sIPv4Output cIPv4Output;
     [optional]call sIPv4CheckSum cIPv4CheckSum;
     call sTCPOutputStart cTCPOutputStart[];
-    call sSemaphore cSemaphore;
+    call sSemaphore cSemaphoreTcppost;
     call sTCPFunctions cTCPFunctions;
 
     call sNetworkTimer cNetworkTimer;

@@ -802,7 +802,7 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 			    (SEQ_LE(tcph->ack, VAR_cep.snd_una) ||
 			     SEQ_GT(tcph->ack, VAR_cep.snd_max)))
 			     	goto reset_drop;
-	}
+        }
 
 		/*
 		 *  RST フラグを受信したときの処理 (異常切断)
@@ -3959,7 +3959,7 @@ tecs_listening (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, T_TCP_SEQ iss)
 	if ((tcph->flags & TCP_FLG_SYN) == 0)
 		return RET_DROP;
 
-	if(input->off.protocolflag & FLAG_USE_IPV4){
+	if (input->off.protocolflag & FLAG_USE_IPV4) {
 		/*
 		 *  次のときは破棄する。
 		 *    ・ポート番号が同一で、送受信 IP アドレス が同一。

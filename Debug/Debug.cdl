@@ -91,7 +91,7 @@ cell tTCPOutputBody TCPOutputBody {
     cTCPOutputStart[0] = TCPCEP_000.eTCPOutputStart;
     cIPv4Output        = IPv4Output.eOutput;
     cIPv4CheckSum      = IPv4Functions.eCheckSum;
-    cSemaphore         = SemaphoreTcppost.eSemaphore;
+    cSemaphoreTcppost  = SemaphoreTcppost.eSemaphore;
     cNetworkTimer      = NetworkTimer.eNetworkTimer[3];
     cTCPFunctions      = TCPFunctions.eTCPFunctions;
 };
@@ -330,7 +330,8 @@ cell tISRWithInterruptRequest NicInterrupt {
 /**
 *   タイマ組み上げ宣言
 **/
-cell tNetworkTimer NetworkTimer{
+cell tNetworkTimer NetworkTimer {
+
     cTCPTask = TCPTask.eTask;
 
     /* 有効なネットワークタイマ宣言 */

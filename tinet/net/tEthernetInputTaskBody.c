@@ -191,7 +191,7 @@ eTaskBody_main(CELLIDX idx)
 	ic = IF_ETHER_NIC_GET_SOFTC();
 	IF_ETHER_NIC_PROBE(ic);
 	cNicDriver_init();
-	cNicDriver_probe( macaddress );
+	cNicDriver_probe(macaddress);
 
 	/* Ethernet 出力タスクを起動する */
 	if( is_cTaskEthernetOutput_joined() )
@@ -209,7 +209,7 @@ eTaskBody_main(CELLIDX idx)
 #if defined(_IP4_CFG)
 
 	/* ARP を初期化する。*/
-	if( is_cArpInput_joined() )
+	if(is_cArpInput_joined())
 		cArpInput_arpInitialize();
 
 #endif	/* of #if defined(_IP4_CFG) */
@@ -221,8 +221,7 @@ eTaskBody_main(CELLIDX idx)
 
 	while (true) {
 		cSemaphoreReceive_wait();
-		if ((input = IF_ETHER_NIC_READ(ic)) != NULL) {
-			// 	cNicDriver_read((int8_t**)&input, (int32_t*)&size, NETBUFFER_ALIGN);
+		if ((input = cNicDriver_read((int8_t**)&input, (int32_t*)&size, NETBUFFER_ALIGN)) != NULL) {
 			NET_COUNT_ETHER(net_count_ether.in_octets,  input->len);
 			NET_COUNT_MIB(if_stats.ifInOctets, input->len + 8);
 			NET_COUNT_ETHER(net_count_ether.in_packets, 1);
@@ -282,7 +281,7 @@ eTaskBody_main(CELLIDX idx)
 				break;
 
 			case ETHER_TYPE_ARP:		/* ARP	*/
-				if( is_cArpInput_joined() )
+				if(is_cArpInput_joined())
 					cArpInput_arpInput((int8_t*)input, size, macaddress);
 				break;
 

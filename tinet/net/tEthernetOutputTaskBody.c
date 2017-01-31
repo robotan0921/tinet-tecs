@@ -214,6 +214,7 @@ eTaskBody_main(CELLIDX idx)
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*output;
 	ID		tskid;
+	int32_t size;
 
 	get_tid(&tskid);
 	syslog(LOG_NOTICE, "[ETHER OUTPUT:%d] started.", tskid);
@@ -236,11 +237,11 @@ eTaskBody_main(CELLIDX idx)
 			}
 #endif	/* of #ifdef SUPPORT_MIB */
 
-			syscall(wai_sem(ic->semid_txb_ready));
-			// TODO: cSemaphoreSend_wait();
+			size = output->len + sizeof(T_NET_BUF) -4 + NETBUFFER_ALIGN;
 
-			IF_ETHER_NIC_START(ic, output);
-			// TODO: cNicDriver_start((int8_t *)output,size, NETBUFFER_ALIGN);
+			cSemaphoreSend_wait();
+
+			cNicDriver_start((int8_t *)output, size, NETBUFFER_ALIGN);
 
 #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF
 
@@ -251,8 +252,7 @@ eTaskBody_main(CELLIDX idx)
 				output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
 
 #ifdef SUPPORT_TCP
-				sig_sem(SEM_TCP_POST_OUTPUT);
-				// TODO: cSemaphoreTcppost_signal();
+				cSemaphoreTcppost_signal();
 #endif	/* of #ifdef SUPPORT_TCP */
 			}
 

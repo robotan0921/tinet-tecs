@@ -6,7 +6,7 @@ const uint32_t NUM_NETWORKTIMER = 5;
 const uint32_t NET_TIMER_CYCLE = 100;
 
 /* タイマタスクの優先度 */
-const int32_t NET_TIMER_PRIORITY = 3;
+const int32_t NET_TIMER_PRIORITY = 5;
 
 signature sCallTimerFunction {
     void callFunction(void);
