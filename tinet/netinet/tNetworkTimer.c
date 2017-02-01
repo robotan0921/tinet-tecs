@@ -147,7 +147,6 @@ eTaskBody_main()
 	       (TINET_PRVER   >>  4) & UINT_C(0x0f),
 	        TINET_PRVER          & UINT_C(0x0f));
 	syslog(LOG_NOTICE, "[NET/TIMER:%d] started.", tskid);
-
 	/* IP を初期化する。*/
 
 #if defined(_IP6_CFG)
@@ -161,8 +160,8 @@ eTaskBody_main()
 #ifdef SUPPORT_TCP
 
 	/* TCP 出力タスクを起動する */
-	syscall(act_tsk(TCP_OUTPUT_TASK));
-	//TODO: if(is_cTCPTask_joined()) cTCPTask_activate();
+	if (is_cTCPTask_joined())
+		cTCPTask_activate();
 
 #endif	/* of #ifdef SUPPORT_TCP */
 
@@ -170,20 +169,20 @@ eTaskBody_main()
 
 	/* UDP 出力タスクを起動する */
 	syscall(act_tsk(UDP_OUTPUT_TASK));
-	//TODO: if(is_cTCPTask_joined()) cTCPTask_activate(); (UDO出力はタスク？？)
+	//TODO: if (is_cUDPTask_joined()) cUDPTask_activate(); (UDP出力はタスク？？)
 
 #endif	/* of #if defined(SUPPORT_UDP) && defined(UDP_CFG_NON_BLOCKING) */
 
 	/* 接続されているが起動していないタイマを起動 */
-	for(ix = NCP_cCallTimerFunction; ix -- > 0 ;) {
-		if(is_cCallTimerFunction_joined(ix) && VAR_timeout ==-1)
+	for(ix = NCP_cCallTimerFunction; ix -- > 0; ) {
+		if(is_cCallTimerFunction_joined(ix) && VAR_timeout == -1)
 		   cCallTimerFunction_callFunction(ix);
 	}
 
 	while (true) {
 		/* タイムアウトしたエントリを呼出す。*/
 		cSemaphoreNetworkTimer_wait();
-		for (ix = NUM_NET_CALLOUT; ix -- > 0; ) {
+		for (ix = NCP_cCallTimerFunction; ix -- > 0; ) {
 			cSemaphoreCalloutLock_wait();
 			if (is_cCallTimerFunction_joined(ix) && VAR_timeout[ix] == 0) {
 				VAR_timeout[ix] = -1;
@@ -218,10 +217,10 @@ eiHandlerBody_main()
 
 	int32_t ix;
 
-	for(ix = N_CP_cCallTimerFunction; ix -- > 0; ) {
-		if(is_cCallTimerFunction_joined(ix) && VAR_timeout[ix] > 0) {
+	for (ix = N_CP_cCallTimerFunction; ix -- > 0; ) {
+		if (is_cCallTimerFunction_joined(ix) && VAR_timeout[ix] > 0) {
 			VAR_timeout[ix]--;
-			if(VAR_timeout[ix] == 0)
+			if (VAR_timeout[ix] == 0)
 			  ciSemaphoreNetworkTimer_signal();
 		}
 	}

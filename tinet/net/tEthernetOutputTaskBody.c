@@ -211,15 +211,12 @@ eTaskBody_main(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	T_IF_SOFTC	*ic;
 	T_NET_BUF	*output;
 	ID		tskid;
 	int32_t size;
 
 	get_tid(&tskid);
 	syslog(LOG_NOTICE, "[ETHER OUTPUT:%d] started.", tskid);
-
-	ic = IF_ETHER_NIC_GET_SOFTC();
 
 	while (true) {
 		while (rcv_dtq(DTQ_ETHER_OUTPUT, (intptr_t*)&output) == E_OK) {
@@ -238,9 +235,7 @@ eTaskBody_main(CELLIDX idx)
 #endif	/* of #ifdef SUPPORT_MIB */
 
 			size = output->len + sizeof(T_NET_BUF) -4 + NETBUFFER_ALIGN;
-
 			cSemaphoreSend_wait();
-
 			cNicDriver_start((int8_t *)output, size, NETBUFFER_ALIGN);
 
 #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF

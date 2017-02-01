@@ -127,10 +127,12 @@ eTCPFunctions_initTcpIss()
 {
 	SYSTIM now;
 
-	getTime( &now );
-	//TODO: netSrand( now );
+	getTime(&now);
+	//TODO: netSrand(now);
+	net_srand(now);
 
 	//TODO: VAR_tcpIss = netRand();
+	VAR_tcpIss = net_rand();
 
 	return VAR_tcpIss;
 }

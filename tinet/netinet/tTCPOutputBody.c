@@ -422,14 +422,15 @@ eCallTimerFunction_callFunction(CELLIDX idx)
 	/* ここに処理本体を記述します #_TEFB_# */
 	int_t cix;
 
-	//TODO: for (cix = NCP_cTCPOutputStart; cix -- > 0; ) {
-	//	cTCPOutputStart_timerFunction( cix );
-	//}
+	for (cix = NCP_cTCPOutputStart; cix -- > 0; ) {
+		cTCPOutputStart_timerFunction( cix );
+	}
 
 	int_t iss = cTCPFunctions_getTcpIss();
 
 	if (iss != 0) {
-		//TODO: cTCPFunctions_setTcpIss(iss + ((T_TCP_SEQ)122*1024 + (((T_TCP_SEQ)netRand() >> 14) & 0x3ffff)) / TCP_SLOW_HZ);
+		// cTCPFunctions_setTcpIss(iss + ((T_TCP_SEQ)122*1024 + (((T_TCP_SEQ)netRand() >> 14) & 0x3ffff)) / TCP_SLOW_HZ);
+		cTCPFunctions_setTcpIss(iss + ((T_TCP_SEQ)122*1024 + (((T_TCP_SEQ)net_rand() >> 14) & 0x3ffff)) / TCP_SLOW_HZ);
 	}
 
 	cNetworkTimer_timeout(5);	/* 500ms間隔で呼び出されるタイマ関数 */

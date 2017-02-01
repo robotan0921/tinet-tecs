@@ -485,7 +485,7 @@ eTCPOutputStart_outputStart(CELLIDX idx)
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
 
-		tecs_tcp_output( p_cellcb );
+		tecs_tcp_output(p_cellcb);
 
 		if (VAR_flags & TCP_CEP_FLG_CLOSE_AFTER_OUTPUT) {
 			/* コネクションを閉じる。*/
@@ -4031,7 +4031,6 @@ tecs_listening (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, T_TCP_SEQ iss)
 static bool_t
 tecs_update_wnd (CELLCB *p_cellcb, T_TCP_HDR *tcph)
 {
-
 	/*
 	 *  更新条件
 	 *
@@ -4073,9 +4072,8 @@ tecs_update_wnd (CELLCB *p_cellcb, T_TCP_HDR *tcph)
 				 *  相手の受信ウィンドが空いたときは、
 				 *  送信ウィンドバッファ用のネットワークバッファ割り当てを再開する。
 				 */
-				VAR_cep.flags = (VAR_flags & ~TCP_CEP_FLG_WBCS_MASK)
+				VAR_flags = (VAR_flags & ~TCP_CEP_FLG_WBCS_MASK)
 				                         |  TCP_CEP_FLG_WBCS_FREE |  TCP_CEP_FLG_POST_OUTPUT;
-				sig_sem(SEM_TCP_POST_OUTPUT);
 				cSemaphoreTcppost_signal();
 			}
 		}

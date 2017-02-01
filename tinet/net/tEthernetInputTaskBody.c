@@ -198,8 +198,8 @@ eTaskBody_main(CELLIDX idx)
 		cTaskEthernetOutput_activate();
 
 	/* ネットワークタイマタスクを起動する */
-	syscall(act_tsk(NET_TIMER_TASK));
-	// TODO: cTaskNetworkTimer_activate();
+	//syscall(act_tsk(NET_TIMER_TASK));
+	cTaskNetworkTimer_activate();
 
 	get_tid(&tskid);
 
@@ -238,6 +238,7 @@ eTaskBody_main(CELLIDX idx)
 #endif	/* of #ifdef ETHER_CFG_COLLECT_ADDR */
 
 				net_srand(0);
+				//TODO: netSrand(0);
 			}
 			rcount ++;
 

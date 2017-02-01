@@ -134,13 +134,13 @@ eEthernetOutput_ethernetOutput(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4
 	/*ヘッダのセット */
 	memcpy(GET_ETHER_HDR(output)->shost, mymac, 6);
 
-	if(output->off.protocolflag & FLAG_USE_IPV4) {
-	GET_ETHER_HDR(output)->type = htons(ETHER_TYPE_IP);
-		if(is_cArpOutput_joined()){}
+	if (output->off.protocolflag & FLAG_USE_IPV4) {
+		GET_ETHER_HDR(output)->type = htons(ETHER_TYPE_IP);
+		if (is_cArpOutput_joined()) {
 			//TODO: return cArpOutput_arpResolve(outputp, size, dstaddr, mymac, tmout);
+		}
 	}
 	else {
-
 		eEthernetOutput_ethernetOutput_outputp_dealloc((void*)outputp);
 		return E_PAR;
 	}
