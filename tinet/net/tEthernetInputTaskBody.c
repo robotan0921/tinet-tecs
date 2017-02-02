@@ -267,7 +267,7 @@ eTaskBody_main(CELLIDX idx)
 
 				NET_COUNT_ETHER(net_count_ether.in_err_packets, 1);
 				NET_COUNT_MIB(if_stats.ifInErrors, 1);
-				syscall(rel_net_buf(input));
+				cNicDriver_read_inputp_dealloc((void *)input);
 				continue;
 			}
 
@@ -278,13 +278,16 @@ eTaskBody_main(CELLIDX idx)
 #if defined(_IP4_CFG)
 
 			case ETHER_TYPE_IP:		/* IP	*/
-				cIPv4Input_IPv4Input((int8_t*)input, size);
-				break;
+				if (is_cIPv4Input_joined()) {
+					cIPv4Input_IPv4Input((int8_t*)input, size);
+					break;
+				}
 
 			case ETHER_TYPE_ARP:		/* ARP	*/
-				if(is_cArpInput_joined())
+				if (is_cArpInput_joined()) {
 					cArpInput_arpInput((int8_t*)input, size, macaddress);
-				break;
+					break;
+				}
 
 #endif	/* of #if defined(_IP4_CFG) */
 
@@ -319,7 +322,7 @@ eTaskBody_main(CELLIDX idx)
 
 				NET_COUNT_ETHER(net_count_ether.in_err_packets, 1);
 				NET_COUNT_MIB(if_stats.ifUnknownProtos, 1);
-				syscall(rel_net_buf(input));
+				cNicDriver_read_inputp_dealloc((void *)input);
 				break;
 			}
 		}

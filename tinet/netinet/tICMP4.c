@@ -237,8 +237,7 @@ eICMP4_input(CELLIDX idx, int8_t* inputp, int32_t size)
 	}
 
 buf_rel:
-	syscall(rel_net_buf(input));
-	//TODO: eICMP4_input_inputp_dealloc((void*)inputp);
+	eICMP4_input_inputp_dealloc((void*)inputp);
 	return IPPROTO_DONE;
 }
 

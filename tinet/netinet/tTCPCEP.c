@@ -1056,7 +1056,6 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 		flags = tecs_reassemble(p_cellcb, input, offset, flags);
 	}
 	else {
-		//TODO: syscall(rel_net_buf(input));
 		eCEPInput_input_inputp_dealloc(inputp);
 		flags &= ~TCP_FLG_FIN;
 	}
@@ -1859,11 +1858,13 @@ static void
 tecs_tcp_output (CELLCB *p_cellcb)
 {
 	bool_t	sendalot = true, idle;
-	ER	error = E_OK;
+	ER	    error = E_OK;
 	int32_t	len;
 	uint_t	doff, win;
 	uint8_t	flags;
 
+syslog(LOG_EMERG, "Debug: tecs_tcp_output");
+syslog(LOG_EMERG, "Debug: VAR_flags = 0x%x", VAR_flags);
 	/*
 	 *  snd_una: 未確認の最小送信 SEQ	 または、確認された最大送信 SEQ
 	 *  snd_max: 送信した最大 SEQ
@@ -2061,6 +2062,7 @@ tecs_tcp_output (CELLCB *p_cellcb)
 			 *  一致するときは送信する。
 			 */
 			if (len == VAR_cep.maxseg) {
+syslog(LOG_EMERG, "Debug: [1]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
@@ -2072,6 +2074,7 @@ tecs_tcp_output (CELLCB *p_cellcb)
 			if ((idle || (VAR_flags & TCP_CEP_FLG_NO_DELAY)) &&
 			    (VAR_flags & TCP_CEP_FLG_NO_PUSH) == 0 &&
 			    len + doff >= VAR_cep.swbuf_count) {
+syslog(LOG_EMERG, "Debug: [2]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
@@ -2092,6 +2095,7 @@ tecs_tcp_output (CELLCB *p_cellcb)
 			if ((VAR_flags & TCP_CEP_FLG_FORCE) ||
 			    (len >= VAR_cep.max_sndwnd / 2 && VAR_cep.max_sndwnd > 0) ||
 			    SEQ_LT(VAR_cep.snd_nxt, VAR_cep.snd_max)) {
+syslog(LOG_EMERG, "Debug: [3]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
@@ -2121,7 +2125,9 @@ tecs_tcp_output (CELLCB *p_cellcb)
 
 			if (adv     >= (long)(VAR_cep.maxseg * 2) ||
 			    adv * 2 >= (long) VAR_rbufSize) {
+syslog(LOG_EMERG, "Debug: [4]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+syslog(LOG_EMERG, "Debug: error = %d", error);
 				continue;
 			}
 		}
@@ -2130,12 +2136,15 @@ tecs_tcp_output (CELLCB *p_cellcb)
 		 *  ACK を送信する。
 		 */
 		if (VAR_flags & TCP_CEP_FLG_ACK_NOW) {
+syslog(LOG_EMERG, "Debug: Send Ack");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
+syslog(LOG_EMERG, "Debug: error = %d", error);
 			continue;
 		}
 
 		if ( (flags & TCP_FLG_RST) ||
 		    ((flags & TCP_FLG_SYN) && (VAR_flags & TCP_CEP_FLG_NEED_SYN) == 0)) {
+syslog(LOG_EMERG, "Debug: [5]");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
@@ -2143,6 +2152,7 @@ tecs_tcp_output (CELLCB *p_cellcb)
 #ifdef TCP_CFG_EXTENTIONS
 
 		if (SEQ_GT(VAR_cep.snd_up, VAR_cep.snd_una)) {
+syslog(LOG_EMERG, "Debug: [6]");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
@@ -2159,6 +2169,7 @@ tecs_tcp_output (CELLCB *p_cellcb)
 		 */
 		if ((flags & TCP_FLG_FIN) &&
 		    ((VAR_flags & TCP_CEP_FLG_SENT_FIN) == 0 || VAR_cep.snd_nxt == VAR_cep.snd_una)) {
+syslog(LOG_EMERG, "Debug: [7]");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
@@ -2726,7 +2737,36 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 
 static void
 tecs_tcp_set_persist_timer (CELLCB *p_cellcb)
-{}
+{
+    T_TCP_TIME time;
+
+    /*
+     *  srtt:   平滑化された RTT
+     *  rttvar: 平滑化された分散
+     */
+    time = ((VAR_cep.srtt >> 2) + VAR_cep.rttvar) >> 1;
+
+    /*
+     *  再送タイマも設定されていれば回復不能エラー
+     */
+    if (VAR_cep.timer[TCP_TIM_REXMT])
+        /* %%% panic("tcp_output REXMT"); %%% */;
+
+    /*
+     *  持続タイマを設定する。
+     */
+    VAR_cep.timer[TCP_TIM_PERSIST] = cTCPFunctions_tcpRangeSet((T_TCP_TIME)(time * tcp_back_off[VAR_cep.rxtshift]),
+                                                                           (T_TCP_TIME)TCP_TVAL_MIN_PERSIST,
+                                                                           (T_TCP_TIME)TCP_TVAL_MAX_PERSIST);
+                                        // tcp_range_set((T_TCP_TIME)(time * tcp_back_off[cep->rxtshift]),
+                                        //         (T_TCP_TIME)TCP_TVAL_MIN_PERSIST,
+                                        //         (T_TCP_TIME)TCP_TVAL_MAX_PERSIST);
+    /*
+     *  再送回数を更新する。
+     */
+    if (VAR_cep.rxtshift < TCP_MAX_REXMT_SHIFT)
+        VAR_cep.rxtshift ++;
+}
 
 /*
  *  tecs_tcp_wait_rwbuf -- 受信ウィンドバッファにデータが入るのを待つ。
@@ -2850,8 +2890,7 @@ tecs_tcp_write_raque (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t 
 		/*
 		 *  ネットワークバッファが確保できないときは割当てない。
 		 */
-		if (tget_net_buf(&new, (uint_t)len, TMO_TCP_GET_NET_BUF) != E_OK)
-			//TODO: if (eCEPInput_input_inputp_alloc(&new, (uint_t)len, TMO_TCP_GET_NET_BUF) != E_OK)
+        if (eCEPInput_input_inputp_alloc(&new, (uint_t)len, TMO_TCP_GET_NET_BUF) != E_OK)
 			new = NULL;
 	}
 	else
@@ -2936,12 +2975,10 @@ tecs_tcp_write_raque (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t 
 				 *  まったく同じセグメントなので何もしない。
 				 */
 				if (new != NULL) {
-					syscall(rel_net_buf(new));
-					//TODO: eCEPInput_input_inputp_dealloc(new);
+					eCEPInput_input_inputp_dealloc(new);
 				}
 
-				syscall(rel_net_buf(input));
-				//TODO: eCEPInput_input_inputp_dealloc(input);
+				eCEPInput_input_inputp_dealloc(input);
 				return flags;
 			}
 
@@ -2962,8 +2999,7 @@ tecs_tcp_write_raque (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t 
 		memcpy(new->buf, input->buf, (size_t)(thoff + TCP_HDR_SIZE));
 		memcpy((uint8_t*)GET_TCP_HDR(new, thoff) + TCP_HDR_SIZE,
 		                 GET_TCP_SDU(input, thoff), (size_t)(inqhdr->slen));
-		syscall(rel_net_buf(input));
-		//TODO: eCEPInput_input_inputp_dealloc(input);
+        eCEPInput_input_inputp_dealloc(input);
 		input = new;
 		inqhdr = GET_TCP_Q_HDR(input, thoff);
 		inqhdr->doff = (uint8_t)TCP_MAKE_DATA_OFF(TCP_HDR_SIZE);
@@ -3022,8 +3058,7 @@ tecs_tcp_write_raque (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t 
 			GET_TCP_Q_HDR(p, poff)->next = nq;
 		else
 			VAR_cep.reassq = nq;
-		syscall(rel_net_buf(q));
-		//TODO: eCEPInput_input_inputp_dealloc(q);
+		eCEPInput_input_inputp_dealloc(q);
 		q = nq;
 	}
 
@@ -3479,6 +3514,7 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 		 */
 		len = 0;
 		if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
+syslog(LOG_EMERG,"Debug: error = %d [1]", error);
 			if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 				VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 			goto err_ret;
@@ -3489,6 +3525,7 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 
 	if (IS_PTR_DEFINED(VAR_sbuf)) {
 		if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
+syslog(LOG_EMERG,"Debug: error = %d [2]", error);
 			if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 				VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 			goto err_ret;
@@ -3512,6 +3549,7 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 		 */
 		len = 0;
 		if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
+syslog(LOG_EMERG,"Debug: error = %d [3]", error);
 			if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 				VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 			goto err_ret;
@@ -3521,6 +3559,7 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 #else	/* of #if defined(TCP_CFG_SWBUF_CSAVE_ONLY) */
 
 	if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
+syslog(LOG_EMERG,"Debug: error = %d [4]", error);
 		if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 			VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 		goto err_ret;
@@ -3727,9 +3766,14 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 
 #endif	/* of #ifdef TCP_CFG_TRACE */
 
+syslog(LOG_EMERG,"Debug: cTCPOutput");
+syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
+syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
+syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
 	/* ネットワーク層 (IP) の出力関数を呼び出す。*/
-	if ((error = cTCPOutput_output(output, size, cGetAddress_getDstAddress( ), cGetAddress_getMyAddress(), ATTR_ipLength)) != E_OK)
+	if ((error = cTCPOutput_output(output, size, cGetAddress_getDstAddress(), cGetAddress_getMyAddress(), ATTR_ipLength)) != E_OK)
 		goto err_ret;
+syslog(LOG_EMERG,"Debug: error = %d [5]", error);
 
 	/*
 	 *  相手に伝えたウィンドウサイズ (win) が 0 以上で、
@@ -3872,8 +3916,7 @@ tecs_reassemble (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t flags
 		 *  受信ウィンドバッファに空きがないときは破棄する。
 		 */
 		NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
-		syscall(rel_net_buf(input));
-		//TOSO: eCEPInput_input_inputp_dealloc(input);
+		eCEPInput_input_inputp_dealloc(input);
 		VAR_flags |= TCP_CEP_FLG_ACK_NOW;
 		flags &= ~TCP_FLG_FIN;
 	}
@@ -4120,8 +4163,7 @@ tecs_drop_after_ack (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff)
 	     SEQ_GT(tcph->ack, VAR_cep.snd_max)))
 		return RET_RST_DROP;
 
-	syscall(rel_net_buf(input));
-	//TODO: eCEPInput_input_inputp_dealloc(input);
+	eCEPInput_input_inputp_dealloc(input);
 
 	/* 送信を指示する。*/
 	VAR_flags |=  TCP_CEP_FLG_ACK_NOW | TCP_CEP_FLG_POST_OUTPUT;

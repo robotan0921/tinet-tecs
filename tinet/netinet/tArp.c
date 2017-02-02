@@ -92,9 +92,9 @@
 
 #include <net/if_var.h>
 
-static void in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input);
-//static T_ARP_ENTRY *arp_lookup (CELLCB *p_cellcb, T_IN4_ADDR addr, bool_t create);
-//static ER arp_request (CELLCB *p_cellcb,const uint8_t *macaddress, T_IN4_ADDR dst);
+static void tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input);
+static T_ARP_ENTRY *tecs_arp_lookup (CELLCB *p_cellcb, T_IN4_ADDR addr, bool_t create);
+static ER tecs_arp_request (CELLCB *p_cellcb,const uint8_t *macaddress, T_IN4_ADDR dst);
 
 /* 受け口関数 #_TEPF_# */
 /* #[<ENTRY_PORT>]# eArpInput
@@ -164,12 +164,13 @@ eArpInput_arpInput(CELLIDX idx, int8_t* inputp, int32_t size, const uint8_t* mac
 	if (input->len < IF_ARP_ETHER_HDR_SIZE)
 		goto buf_rel;
 
-	in_arpinput(p_cellcb, macaddress, input);
+	tecs_in_arpinput(p_cellcb, macaddress, input);
 	return;
 
 buf_rel:
 	NET_COUNT_ARP(net_count_arp.in_err_packets, 1);
-	syscall(rel_net_buf(input));
+	eArpInput_arpInput_inputp_dealloc((void *)inputp);
+
 }
 
 /* #[<ENTRY_PORT>]# eArpOutput
@@ -177,11 +178,7 @@ buf_rel:
  * signature:  sArpOutput
  * context:    task
  * #[</ENTRY_PORT>]# */
-//TEMP:
-ER
-eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dstaddr, const uint8_t* macaddress, TMO tmout)
-{}
-#if 0
+
 /* #[<ENTRY_FUNC>]# eArpOutput_arpResolve
  * name:         eArpOutput_arpResolve
  * global_name:  tArp_eArpOutput_arpResolve
@@ -202,11 +199,11 @@ eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dst
 	/* ここに処理本体を記述します #_TEFB_# */
 	T_ARP_ENTRY	*ent;
 	T_ETHER_HDR	*eth;
-	T_NET_BUF *output = (T_NET_BUF *)outputp;
+	T_NET_BUF 	*output = (T_NET_BUF *)outputp;
 	T_IFNET		*ifp = IF_GET_IFNET();
 
-	T_IN4_ADDR src = ifp->in4_ifaddr.addr;	// TODO: cIPv4Functions_getIPv4Address();
-	T_IN4_ADDR mask = ifp->in4_ifaddr.mask;	// TODO: cIPv4Functions_getIPv4Mask();
+	T_IN4_ADDR 	src  = cFunctions_getIPv4Address();
+	T_IN4_ADDR 	mask = cFunctions_getIPv4Mask();
 
 	eth = GET_ETHER_HDR(output);
 
@@ -219,29 +216,25 @@ eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dst
 	if (dstaddr == IPV4_ADDR_BROADCAST ||
 	    dstaddr == (( src & mask ) | ~mask )) {
 		memcpy(eth->dhost, ether_broad_cast_addr, ETHER_ADDR_LEN);
-		return true;
-		// TODO: return cEthernetRawOutput_ethernetRawOutput(output,size,tmout);
-
-		}
+syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [1]");
+		return cEthernetRawOutput_ethernetRawOutput(output, size, tmout);
+	}
 
 	/* 送信先 GW の IP アドレスが ARP キャッシュにあるか調べる。*/
-	syscall(wai_sem(SEM_ARP_CACHE_LOCK));
-	// TODO: cArpSemaphore_wait();
-	ent = arp_lookup(p_cellcb, dstaddr, true);
+	cArpSemaphore_wait();
+	ent = tecs_arp_lookup(p_cellcb, dstaddr, true);
 	if (ent->expire) {
 		memcpy(eth->dhost, ent->mac_addr, ETHER_ADDR_LEN);
-		syscall(sig_sem(SEM_ARP_CACHE_LOCK));
-		// TODO: cArpSemaphore_signal();
-		return true;
-		// TODO: return cEthernetRawOutput_ethernetRawOutput(output,size,tmout);
-
-		}
+		cArpSemaphore_signal();
+syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [2]");
+		return cEthernetRawOutput_ethernetRawOutput(output, size, tmout);
+	}
 	else {
 	 	/* 送信がペンデングされているフレームがあれば捨てる。*/
 		if (ent->hold) {
 			NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_ERR_PACKETS], 1);
-			syscall(rel_net_buf(ent->hold));
-			}
+			eArpOutput_arpResolve_outputp_dealloc((void*)ent->hold);
+		}
 
 		/*
 		 *  送信をペンディングする。
@@ -253,18 +246,15 @@ eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dst
 		else {
 			output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
 			ent->hold = NULL;
-			}
-		syscall(sig_sem(SEM_ARP_CACHE_LOCK));
-		// TODO: cArpSemaphore_signal();
-
-		/* アドレス解決要求を送信する。*/
-		arp_request(p_cellcb, macaddress, dstaddr);
-		return false;
 		}
 
-	return(ercd);
+		cArpSemaphore_signal();
+
+		/* アドレス解決要求を送信する。*/
+		return tecs_arp_request(p_cellcb, macaddress, dstaddr);
+	}
 }
-#endif
+
 /* #[<ENTRY_PORT>]# eArpTimer
  * entry port: eArpTimer
  * signature:  sCallTimerFunction
@@ -288,7 +278,24 @@ eArpTimer_callFunction(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	int32_t ix;
+	cArpSemaphore_wait();
 
+	for (ix = ATTR_arpEntry;ix-- > 0; ) {
+		if (VAR_arp_cache[ix].expire) {
+			VAR_arp_cache[ix].expire -= 600;
+			if (VAR_arp_cache[ix].expire == 0) {
+				if(VAR_arp_cache[ix].hold){
+					//MIBをやってmikan
+					eArpInput_arpInput_inputp_dealloc((void*)VAR_arp_cache[ix].hold);
+				}
+				memset(&VAR_arp_cache[ix],0,sizeof(T_ARP_ENTRY));
+			}
+		}
+	}
+
+	cArpSemaphore_signal();
+	cNetworkTimer_timeout(600); 	/* 60s間隔で呼び出されるタイマ関数です */
 }
 
 /* #[<POSTAMBLE>]#
@@ -296,11 +303,11 @@ eArpTimer_callFunction(CELLIDX idx)
  * #[</POSTAMBLE>]#*/
 
 /*
- *  in_arpinput -- TCP/IP 用 ARP の入力関数
+ *  tecs_in_arpinput -- TCP/IP 用 ARP の入力関数
  */
 
 static void
-in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
+tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 {
 	T_NET_BUF	*pending;
 	T_ETHER_HDR	*eth;
@@ -339,7 +346,7 @@ in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 			                  mac2str(NULL, et_arph->shost));
 			taddr = saddr;
 			goto reply;
-			}
+		}
 		else
 			goto buf_rel;
 
@@ -369,9 +376,9 @@ in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 	 *  送信元 IP アドレスが ARP キャッシュにあるか調べる。
 	 *  キャッシュになければ、新たにエントリを登録する。
 	 */
-	syscall(wai_sem(SEM_ARP_CACHE_LOCK));
-	ent = arp_lookup(saddr, true);
-	// TODO: ent = arp_lookup(p_cellcb, saddr, true);
+	cArpSemaphore_wait();
+	// ent = arp_lookup(saddr, true);
+	ent = tecs_arp_lookup(p_cellcb, saddr, true);
 
 	memcpy(ent->mac_addr, et_arph->shost, ETHER_ADDR_LEN);
 	ent->expire = ARP_CACHE_KEEP;
@@ -393,7 +400,7 @@ in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 
 		}
 	else
-		syscall(sig_sem(SEM_ARP_CACHE_LOCK));
+		cArpSemaphore_signal();
 
 reply:
 
@@ -424,18 +431,18 @@ reply:
 err_ret:
 	NET_COUNT_ARP(net_count_arp.in_err_packets, 1);
 buf_rel:
-	syscall(rel_net_buf(input));
+	eArpInput_arpInput_inputp_dealloc((void*)input);
 }
 
-#if 0
+
 /*
- *  arp_lookup -- ARP キャッシュの探索と登録
+ *  tecs_arp_lookup -- ARP キャッシュの探索と登録
  *
  *    注意: SEM_ARP_CACHE_LOCK を獲得した状態で呼出すこと
  */
 
 static T_ARP_ENTRY *
-arp_lookup (CELLCB	*p_cellcb, T_IN4_ADDR addr, bool_t create)
+tecs_arp_lookup (CELLCB	*p_cellcb, T_IN4_ADDR addr, bool_t create)
 {
 	int32_t		ix, six;
 	uint16_t	min;
@@ -474,14 +481,14 @@ arp_lookup (CELLCB	*p_cellcb, T_IN4_ADDR addr, bool_t create)
 	else
 		return NULL;
 }
-#endif
-#if 0
+
+
 /*
- *  arp_request -- MAC アドレス解決要求
+ *  tecs_arp_request -- MAC アドレス解決要求
  */
 
 static ER
-arp_request (CELLCB *p_cellcb, const uint8_t *macaddress, T_IN4_ADDR dst)
+tecs_arp_request (CELLCB *p_cellcb, const uint8_t *macaddress, T_IN4_ADDR dst)
 {
 	ER		error;
 	T_IN4_ADDR	src;
@@ -493,7 +500,9 @@ arp_request (CELLCB *p_cellcb, const uint8_t *macaddress, T_IN4_ADDR dst)
 	NET_COUNT_ARP(net_count_arp.out_octets , IF_ARP_ETHER_HDR_SIZE - IF_HDR_SIZE);
 	NET_COUNT_ARP(net_count_arp.out_packets, 1);
 
-	if ((error = tget_net_buf(&arp_req, IF_ARP_ETHER_HDR_SIZE, TMO_ARP_GET_NET_BUF)) == E_OK) {
+syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [3]");
+	if ((error = cEthernetRawOutput_ethernetRawOutput_outputp_alloc((void **)&arp_req,
+				IF_ARP_ETHER_HDR_SIZE, TMO_ARP_GET_NET_BUF)) == E_OK) {
 
 		/* イーサネットヘッダを設定する。*/
 		eth     = GET_ETHER_HDR(arp_req);
@@ -511,19 +520,18 @@ arp_request (CELLCB *p_cellcb, const uint8_t *macaddress, T_IN4_ADDR dst)
 
 		/* イーサネット ARP ヘッダを設定する。*/
 		et_arph = GET_ETHER_ARP_HDR(arp_req);
-		src     = IF_GET_IFNET()->in4_ifaddr.addr;
-		// TODO: src = cIPv4Functions_getIPv4Address();
+		src 	= cFunctions_getIPv4Address();
 		memcpy(et_arph->shost, macaddress, ETHER_ADDR_LEN);
 		memset(et_arph->thost, 0, ETHER_ADDR_LEN);
 		ahtonl(et_arph->sproto, src);
 		ahtonl(et_arph->tproto, dst);
-
+syslog(LOG_EMERG, "Debug: arp_req->len = %d", arp_req->len);
+syslog(LOG_EMERG, "Debug: arp_req->flags = 0x%x", arp_req->flags);
+syslog(LOG_EMERG, "Debug: arp_req->buf = %s", arp_req->buf);
 		/* 送信する。*/
-		error = IF_RAW_OUTPUT(arp_req, TMO_ARP_OUTPUT);
-		// TODO: error = cEthernetRawOutput_ethernetRawOutput((int8_t*)arp_req,GET_IF_ARP_HDR_SIZE(input), TMO_ARP_OUTPUT);
-		}
+		error = cEthernetRawOutput_ethernetRawOutput((int8_t*)arp_req, GET_IF_ARP_HDR_SIZE(input), TMO_ARP_OUTPUT);
+	}
 	if (error != E_OK)
 		NET_COUNT_ARP(net_count_arp.out_err_packets, 1);
 	return error;
 }
-#endif

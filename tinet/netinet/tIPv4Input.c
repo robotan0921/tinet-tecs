@@ -381,8 +381,7 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 
 buf_rel:
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_IN_ERR_PACKETS], 1);
-	syscall(rel_net_buf(input));
-	//TODO: eIPv4Input_IPv4Input_inputp_dealloc( (void*)inputp );
+	eIPv4Input_IPv4Input_inputp_dealloc((void*)inputp);
 }
 
 /* #[<POSTAMBLE>]#

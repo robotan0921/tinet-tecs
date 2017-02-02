@@ -137,7 +137,8 @@ eEthernetOutput_ethernetOutput(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4
 	if (output->off.protocolflag & FLAG_USE_IPV4) {
 		GET_ETHER_HDR(output)->type = htons(ETHER_TYPE_IP);
 		if (is_cArpOutput_joined()) {
-			//TODO: return cArpOutput_arpResolve(outputp, size, dstaddr, mymac, tmout);
+syslog(LOG_EMERG, "Debug: cArpOutput_arpResolve");
+			return cArpOutput_arpResolve(outputp, size, dstaddr, mymac, tmout);
 		}
 	}
 	else {

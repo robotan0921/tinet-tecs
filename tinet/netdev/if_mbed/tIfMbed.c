@@ -295,9 +295,8 @@ eNicDriver_init(CELLIDX idx)
 	VAR_sc = &mbed_softc;
 
 	/* mbed_init 本体を呼び出す。*/
-	if_mbed_init_sub( p_cellcb );
+	if_mbed_init_sub(p_cellcb);
 
-	//act_tsk( IF_MBED_PHY_TASK );
 	cTask_activate();
 
 	ethernet_set_link(-1, 0);
@@ -331,7 +330,11 @@ eNicDriver_start(CELLIDX idx, int8_t* outputp, int32_t size, uint8_t align)
 		len = ethernet_write((char *)output->buf + IF_ETHER_NIC_HDR_ALIGN + pos, res);
 	}
 
+syslog(LOG_EMERG, "Debug: ethernet_send");
     ethernet_send();
+syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
+syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
+syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
 
 }
 
@@ -358,8 +361,7 @@ eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 *	今後，修正を行う
 **/
 //	T_MBED_SOFTC *sc = p_cellcb->sc;
-//	T_NET_BUF *input = NULL;
-	struct t_net_buf *input = NULL;		// TODO
+	T_NET_BUF *input = NULL;
 	inputp = &input;
 	//uint_t align;
 	int len;
@@ -372,7 +374,8 @@ eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 
 	align = 0;
 
-	if ((error = tget_net_buf(&input, align, TMO_IF_MBED_GET_NET_BUF)) == E_OK && input != NULL) {
+	// if ((error = tget_net_buf(&input, align, TMO_IF_MBED_GET_NET_BUF)) == E_OK && input != NULL) {
+	if ((error = eNicDriver_read_inputp_alloc(&input, align, TMO_IF_MBED_GET_NET_BUF)) == E_OK && input != NULL) {
 		dst = input->buf + IF_ETHER_NIC_HDR_ALIGN;
 		input->len = ethernet_read((char *)dst, len);
 	}
@@ -534,7 +537,8 @@ void	// TODO: Componentize (TECS)
 if_mbed_eth_handler (void) {
 	if ((ETHER.EESR0 & ETHER_EESR0_TC) != 0) {
 		/* 送信割り込み処理 */
-		isig_sem(if_softc.semid_txb_ready);
+		// isig_sem(if_softc.semid_txb_ready);
+		isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
 	}
 
 	INT_Ether();

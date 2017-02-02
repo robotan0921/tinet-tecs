@@ -165,24 +165,23 @@ eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmo
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	ER error = E_OK;
 	T_NET_BUF *output = (T_NET_BUF*)outputp;	// TODO
 
 	/* Ethernet 出力キューに投入する。*/
-	if ((error = tsnd_dtq(DTQ_ETHER_OUTPUT, (intptr_t)output, tmout)) != E_OK) {
-	//TODO: if((ercd = cDataqueue_sendTimeout((intptr_t)outputp,tmout)) != E_OK){
+syslog(LOG_EMERG, "Debug: Send dataqueue");
+	if ((ercd = tsnd_dtq(DTQ_ETHER_OUTPUT, (intptr_t)output, tmout)) != E_OK) {
+	//TODO: if((ercd = cDataqueue_sendTimeout((intptr_t)outputp,tmout)) != E_OK) {
 		NET_COUNT_ETHER(net_count_ether.out_err_packets, 1);
 		NET_COUNT_MIB(if_stats.ifOutDiscards, 1);
 
 		/* IF でネットワークバッファを開放しないフラグをチェックする。*/
 		if ((output->flags & NB_FLG_NOREL_IFOUT) == 0) {
-			syscall(rel_net_buf(output));
-			}
+			eRawOutput_ethernetRawOutput_outputp_dealloc((void*)output);
+		}
 		else {
 			output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
-			}
-		IF_ETHER_NIC_RESET(IF_ETHER_NIC_GET_SOFTC());
-		//TODO: cNicDriver_reset();
+		}
+		cNicDriver_reset();
 	}
 
 	return(ercd);
@@ -220,7 +219,8 @@ eTaskBody_main(CELLIDX idx)
 
 	while (true) {
 		while (rcv_dtq(DTQ_ETHER_OUTPUT, (intptr_t*)&output) == E_OK) {
-			// TODO: cDataqueue_receive((intptr_t*)&output
+syslog(LOG_EMERG, "Debug: Recieve dataqueue");
+			// TODO: cDataqueue_receive((intptr_t*)&output)
 			NET_COUNT_ETHER(net_count_ether.out_octets,  output->len);
 			NET_COUNT_MIB(if_stats.ifOutOctets, output->len + 8);
 			NET_COUNT_ETHER(net_count_ether.out_packets, 1);
@@ -236,12 +236,16 @@ eTaskBody_main(CELLIDX idx)
 
 			size = output->len + sizeof(T_NET_BUF) -4 + NETBUFFER_ALIGN;
 			cSemaphoreSend_wait();
+syslog(LOG_EMERG, "Debug: cNicDriver_start");
+syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
+syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
+syslog(LOG_EMERG, "Debug: output->buf = 0x%x", output->buf);
 			cNicDriver_start((int8_t *)output, size, NETBUFFER_ALIGN);
 
 #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF
 
 			if ((output->flags & NB_FLG_NOREL_IFOUT) == 0) {
-				syscall(rel_net_buf(output));
+				eRawOutput_ethernetRawOutput_outputp_dealloc((void*)output);
 			}
 			else {
 				output->flags &= (uint8_t)~NB_FLG_NOREL_IFOUT;
