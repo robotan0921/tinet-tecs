@@ -205,7 +205,7 @@ eTCPOutput_output(CELLIDX idx, int8_t* outputp, int32_t size, const int8_t* dsta
 	/* ここに処理本体を記述します #_TEFB_# */
 	T_NET_BUF *output = (T_NET_BUF*)outputp;
 
-	if((is_cIPv4Output_joined()) && (output->off.protocolflag & FLAG_USE_IPV4)) {
+	if ((is_cIPv4Output_joined()) && (output->off.protocolflag & FLAG_USE_IPV4)) {
 		T_IN4_ADDR dst = *((T_IN4_ADDR*)dstaddr);
 		T_IN4_ADDR src = *((T_IN4_ADDR*)srcaddr);
 
@@ -214,6 +214,10 @@ eTCPOutput_output(CELLIDX idx, int8_t* outputp, int32_t size, const int8_t* dsta
 		T_TCP_HDR *tcph = GET_TCP_HDR(output, output->off.ifhdrlen + output->off.iphdrlenall);
 		tcph->sum 		= cIPv4CheckSum_ipv4CheckSum(outputp, size, output->off.ifhdrlen + output->off.iphdrlenall, IPPROTO_TCP);
 
+syslog(LOG_EMERG,"Debug: cIPv4Output_IPv4Output");
+syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
+syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
+syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
 		return cIPv4Output_IPv4Output(outputp, size, TMO_TCP_OUTPUT);
 	}
 
@@ -285,7 +289,7 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	T_NET_BUF *output = (T_NET_BUF*)outputp;
+	T_NET_BUF 	*output = (T_NET_BUF*)outputp;
 	T_TCP_HDR	*tcph;
 	uint_t		win = 0;
 	uint_t		hdr_offset;

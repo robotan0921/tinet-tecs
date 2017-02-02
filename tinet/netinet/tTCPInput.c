@@ -207,6 +207,8 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	for (ix = 0; ix < N_CP_cCEPInput; ix++) {
 		if (cCEPInput_check(ix, dstaddr, srcaddr, addrlen, tcph->dport, tcph->sport) == E_OK) {
 			syslog(LOG_EMERG, "CEP FIND! seq :%d  ack:%d .", tcph->seq, tcph->ack);
+			syslog(LOG_EMERG, "Debug: sport :%d  dport:%d .", tcph->sport, tcph->dport);
+			syslog(LOG_EMERG, "Debug: flags :0x%x  doff :0x%x .", tcph->flags, tcph->doff);
 			error = cCEPInput_input(ix, inputp, size);
 			syslog(LOG_EMERG, "********success!*********");
 			return error;

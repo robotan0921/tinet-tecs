@@ -124,6 +124,8 @@ eOutput_IPv4Output(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmout)
 	T_NET_BUF *output = (T_NET_BUF *)outputp;
 	T_IP4_HDR *ip4h;
 	T_IN4_ADDR gw;
+	int32_t offset, mtu;
+	uint8_t proto;
 
 #ifdef SUPPORT_IPSEC
 	T_SECPOLICY* sp;
@@ -139,9 +141,9 @@ eOutput_IPv4Output(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmout)
 	/* SPDを取得する */
 	sp = ipsec4_getpolicybyaddr(output, IPSEC_DIR_OUTBOUND, &ipsec_error);
 	if (sp==NULL) {
-                ercd = ipsec_error;
-                return ercd;
-        }
+    	ercd = ipsec_error;
+        return ercd;
+	}
 
         /* ポリシをチェックする*/
 #if 0
@@ -209,9 +211,27 @@ skip_ipsec:
 
 #ifdef IP4_CFG_FRAGMENT
 
+	/*******IPフラグメント処理　mikan*******/
+	if (output->off.protocolflag & FLAG_USE_UDP)
+		proto = IPPROTO_UDP;
+	if (output->off.protocolflag & FLAG_USE_TCP)
+		proto = IPPROTO_TCP;
+	if (output->off.protocolflag & FLAG_USE_ETHER)
+		mtu = ETHER_MTU;
+
 	ip4h = GET_IP4_HDR(output);
+	//TODO: ip4h = GET_IP4_HDR(output, output->off.ifhdrlen);
+
+	/* IP ヘッダを設定する ---------------------*/
+	ip4h->vhl	= IP4_MAKE_VHL(IPV4_VERSION, IP4_HDR_SIZE >> 2);
+	ip4h->len	= htons(output->len - output->off.ifhdrlen + output->off.ifalign);
+	ip4h->proto	= proto;
+	ip4h->ttl	= IP4_DEFTTL;
+	ip4h->type	= 0;
+	ip4h->id	= ip4h->flg_off = ip4h->sum = 0;
 
 	gw = in4_rtalloc(ntohl(ip4h->dst));
+	//TODO: gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
 
 	/*
 	 *  データグラムサイズがネットワークの MTU を超えていれば、
@@ -262,29 +282,28 @@ skip_ipsec:
 					NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_ERR_PACKETS], 1);
 					NET_COUNT_MIB(ip_stats.ipFragFails, 1);
 					return ercd;
-					}
 				}
+			}
 			else {
 				/* 獲得できなければ、送信をあきらめる。*/
 				syscall(rel_net_buf(output));
 				NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_ERR_PACKETS], 1);
 				NET_COUNT_MIB(ip_stats.ipFragFails, 1);
 				return E_NOMEM;
-				}
+			}
 
 			off += IF_MTU - IP4_HDR_SIZE;
-			}
+		}
 		syscall(rel_net_buf(output));
 		frag_id ++;
 		NET_COUNT_MIB(ip_stats.ipFragOKs, 1);
-		}
+	}
 	else {
-
 		/* ヘッダを埋める。*/
 		ip4h->id  = htons(frag_id);
 		frag_id ++;
 		ip4h->sum = 0;
-		ip4h->sum = in_cksum(ip4h, GET_IP4_HDR_SIZE(output));
+		ip4h->sum = cFunctions_checkSum((void*)ip4h, (uint_t)GET_IP4_HDR_SIZE(output));
 
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_OCTETS], ntohs(ip4h->len));
 		NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_PACKETS], 1);
@@ -292,11 +311,31 @@ skip_ipsec:
 		IF_SET_PROTO(output, IF_PROTO_IP);
 		if ((ercd = IF_OUTPUT(output, &gw, NULL, tmout)) != E_OK)
 			NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_ERR_PACKETS], 1);
-		}
+	}
 
 #else	/* of #ifdef IP4_CFG_FRAGMENT */
 
+	/*******IPフラグメント処理　mikan*******/
+	if (output->off.protocolflag & FLAG_USE_UDP)
+		proto = IPPROTO_UDP;
+	if (output->off.protocolflag & FLAG_USE_TCP)
+		proto = IPPROTO_TCP;
+	if (output->off.protocolflag & FLAG_USE_ETHER)
+		mtu = ETHER_MTU;
+
 	ip4h = GET_IP4_HDR(output);
+	//TODO: ip4h = GET_IP4_HDR(output, output->off.ifhdrlen);
+
+	/* IP ヘッダを設定する ---------------------*/
+	ip4h->vhl	= IP4_MAKE_VHL(IPV4_VERSION, IP4_HDR_SIZE >> 2);
+	ip4h->len	= htons(output->len - output->off.ifhdrlen + output->off.ifalign);
+	ip4h->proto	= proto;
+	ip4h->ttl	= IP4_DEFTTL;
+	ip4h->type	= 0;
+	ip4h->id	= ip4h->flg_off = ip4h->sum = 0;
+
+	gw = in4_rtalloc(ntohl(ip4h->dst));
+	//TODO: gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
 
 	/* データグラムサイズがネットワークの MTU を超えていればエラー */
 	if (ntohs(ip4h->len) > IF_MTU)
@@ -306,9 +345,7 @@ skip_ipsec:
 	ip4h->id  = htons(frag_id);
 	frag_id ++;
 	ip4h->sum = 0;
-	ip4h->sum = in_cksum(ip4h, (uint_t)GET_IP4_HDR_SIZE(output));
-	//TODO: ip4h->sum = cFunctions_checkSum((void*)ip4h, (uint_t)GET_IP4_HDR_SIZE(ip4h));
-
+	ip4h->sum = cFunctions_checkSum((void*)ip4h, (uint_t)GET_IP4_HDR_SIZE(output));
 
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_OCTETS], ntohs(ip4h->len));
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_PACKETS], 1);
@@ -316,10 +353,15 @@ skip_ipsec:
 	gw = in4_rtalloc(ntohl(ip4h->dst));
 	//TODO: gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
 
-	IF_SET_PROTO(output, IF_PROTO_IP);
-	if ((ercd = IF_OUTPUT(output, &gw, NULL, tmout)) != E_OK)
-		NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_ERR_PACKETS], 1);
-		NET_COUNT_MIB(ip_stats.ipOutDiscards, 1);
+	if ((is_cEthernetOutput_joined()) && (output->off.protocolflag & FLAG_USE_ETHER)) {
+syslog(LOG_EMERG,"Debug: cEthernetOutput_ethernetOutput");
+syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
+syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
+syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
+		if ((ercd = cEthernetOutput_ethernetOutput(output, size, gw, tmout)) != E_OK)
+			return ercd;
+		return ercd;
+	}
 
 #endif	/* of #ifdef IP4_CFG_FRAGMENT */
 
@@ -327,7 +369,8 @@ skip_ipsec:
 	bad:
 #endif /* SUPPORT_IPSEC */
 
-	return ercd;
+	eOutput_IPv4Output_outputp_dealloc((void*)outputp);
+	return E_ID;
 }
 
 /* #[<ENTRY_FUNC>]# eOutput_getOffset
