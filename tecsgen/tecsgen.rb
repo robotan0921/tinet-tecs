@@ -4,7 +4,7 @@
 #  TECS Generator
 #      Generator for TOPPERS Embedded Component System
 #  
-#   Copyright (C) 2008-2016 by TOPPERS Project
+#   Copyright (C) 2008-2017 by TOPPERS Project
 #--
 #   上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
 #   ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
@@ -35,7 +35,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: tecsgen.rb 2578 2016-05-08 10:03:47Z okuma-top $
+#   $Id: tecsgen.rb 2626 2017-02-05 11:49:44Z okuma-top $
 #++
 
 #= tecsgen  : TECS のジェネレータ
@@ -53,7 +53,7 @@
 #Authors::    安積　卓也(ASP+TECS, EV3RT+TECS, mruby on TECS等実装)
 #  Authors list is in i-ro-ha order.
 #Version::   see version.rb
-$Copyright = "Copyright(c) 2008-2016, TOPPERS project. All rights reserved."
+$Copyright = "Copyright(c) 2008-2017, TOPPERS project. All rights reserved."
 $License   = "TOPPERS License"
 
 # This doesn't work as expected in exerb version (Ruby 1.8.7?)

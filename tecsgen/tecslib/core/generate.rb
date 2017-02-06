@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: generate.rb 2614 2016-10-23 11:27:30Z okuma-top $
+#   $Id: generate.rb 2626 2017-02-05 11:49:44Z okuma-top $
 #++
 
 def ifdef_macro_only f
@@ -1953,12 +1953,12 @@ EOT
       end
       f.print <<EOT
 /* [ref_desc] #{p.get_name} */
-Inline Descriptor( #{p.get_signature.get_name} )
+Inline Descriptor( #{p.get_signature.get_global_name} )
 #{@global_name}_#{p.get_name}_refer_to_descriptor( #{p_that}#{array} )
 {
-    Descriptor( #{p.get_signature.get_name} )  des;
+    Descriptor( #{p.get_signature.get_global_name} )  des;
 #{p_cellcb}    /* cast is ncecessary for removing 'const'  */
-#{assert}    des.vdes = (struct tag_#{p.get_signature.get_name}_VDES *)#{cb}#{p.get_name}#{array2};
+#{assert}    des.vdes = (struct tag_#{p.get_signature.get_global_name}_VDES *)#{cb}#{p.get_name}#{array2};
     return des;
 }
 
@@ -2011,7 +2011,7 @@ EOT
       f.print <<EOT
 /* [dynamic] #{p.get_name} */
 Inline void
-#{@global_name}_#{p.get_name}_set_descriptor( #{p_that}#{array}Descriptor( #{p.get_signature.get_name} ) des )
+#{@global_name}_#{p.get_name}_set_descriptor( #{p_that}#{array}Descriptor( #{p.get_signature.get_global_name} ) des )
 {
 #{p_cellcb}    assert( des.vdes != NULL );
 #{assert2}    #{cb}#{p.get_name}#{array2} = des.vdes;
@@ -3584,10 +3584,12 @@ EOT
       cell_IDX = "&#{cell_CB_name}"
     end
 
-    if ! has_CB? && ! has_INIB? then
-      cell_CBP = "NULL"    # CB も INIB もなければ NULL に置換
-    else
+    if has_CB? then
       cell_CBP = "&#{cell_CB_name}"
+    elsif has_INIB? then
+      cell_CBP = "&#{cell_INIB_name}"
+    else
+      cell_CBP = "NULL"    # CB も INIB もなければ NULL に置換
     end
 
     name_array = []
@@ -3602,6 +3604,8 @@ EOT
     name_array[8] = cell_CBP        # cell CBP
     name_array[9] = @global_name    # celltype global name
     name_array[10] = cell.get_global_name # cell global name
+
+    dbgPrint "cell=#{cell.get_name} has_CB?=#{has_CB?}  has_INIB?=#{has_INIB?} idx_is_id_act=#{@idx_is_id_act}\n"
 
     return name_array
   end
@@ -4355,10 +4359,10 @@ EOT
         subsc = p.get_array_size ? ' int_t subscript ' : ''
         f.print " *   [ref_desc]\n"
         f.printf( " *      %-14s %s;\n",
-                  "Descriptor( #{p.get_signature.get_name} )", 
+                  "Descriptor( #{p.get_signature.get_global_name} )", 
                   "#{p.get_name}_refer_to_descriptor(#{subsc})" )
         f.printf( " *      %-14s %s;\n",
-                  "Descriptor( #{p.get_signature.get_name} )", 
+                  "Descriptor( #{p.get_signature.get_global_name} )", 
                   "#{p.get_name}_ref_desc(#{subsc})      (same as above; abbreviated version)" )
       end
       if p.is_dynamic? then
@@ -4371,7 +4375,7 @@ EOT
         end
         f.printf( " *      %-14s %s;\n",
                   "void",
-                  "#{p.get_name}_set_descriptor( #{subsc}Descriptor( #{p.get_signature.get_name} ) desc )" )
+                  "#{p.get_name}_set_descriptor( #{subsc}Descriptor( #{p.get_signature.get_global_name} ) desc )" )
         if p.is_optional? then
           f.printf( " *      %-14s %s;\n",
                     "void",

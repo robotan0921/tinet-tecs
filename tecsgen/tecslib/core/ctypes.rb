@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: ctypes.rb 2296 2015-11-29 11:57:33Z okuma-top $
+#   $Id: ctypes.rb 2626 2017-02-05 11:49:44Z okuma-top $
 #++
 
 # CType は C_parser で定義される型を扱う CIntType, CFloatType などに include するもの
@@ -117,12 +117,14 @@ module CType
         @b_volatile = true
       end
       return self
-    else
+    elsif self.instance_of?( CFloatType ) then
       # mikan long double
       #   TECS には long double を表現する手段がない (double80_t を定義すればよいか?)
 #      cdl_warning( "C1003 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.class, another.class, self.class )
       cdl_warning( "W9999 $1 & $2 incompatible (\'long double\' is not supported.). Treated as $3." , self.get_type_str, another.get_type_str, self.get_type_str )
       return self
+    else
+      raise "merge: unknown type"
     end
   end
 

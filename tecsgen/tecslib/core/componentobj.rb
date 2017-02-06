@@ -34,7 +34,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: componentobj.rb 2605 2016-10-16 14:09:37Z okuma-top $
+#   $Id: componentobj.rb 2626 2017-02-05 11:49:44Z okuma-top $
 #++
 
 # STAGE:
@@ -137,6 +137,7 @@ class Signature < NSBDNode  # < Nestable
     id = 1
     function_head_list.get_items.each{ |f|
       @func_name_to_id[ f.get_name ] = id
+      f.set_owner self
       id += 1
     }
     if id == 1 then
@@ -948,7 +949,7 @@ class Celltype < NSBDNode # < Nestable
                 next if find_descriptor_param signature, :DYNAMIC
               end
             end
-            cdl_warning( 'W9999 $1 cannot handle Descriptor infromation for port $2', @name, port.get_name )
+            cdl_warning( 'W9999 "$1" cannot handle Descriptor "$2" infromation for port "$3"', @name, param.get_name, port.get_name )
           }
         end
       end
@@ -964,6 +965,9 @@ class Celltype < NSBDNode # < Nestable
     return nil
   end
   def find_ref_desc_port signature
+    if signature == nil then  # すでにエラー
+      return nil
+    end
     dbgPrint "[DYNAMIC] find_ref_desc_port signature=#{signature.get_name}"
     @port.each{ |port|
       dbgPrint "[DYNAMIC] port=#{port.get_name} signature=#{port.get_signature.get_name} ref_desc=#{port.is_ref_desc?}"
@@ -1128,6 +1132,10 @@ class Celltype < NSBDNode # < Nestable
 
   def is_active?
     @active
+  end
+
+  def idx_is_id_act?
+    @idx_is_id_act
   end
 
   #=== Celltype# アクティブではないか
@@ -3981,7 +3989,7 @@ end
       elsif @signature && @signature.is_empty? then
         cdl_error( "S9999 $1 cannot be specified for empty signature", dyn_ref  )
       elsif @signature && @signature.has_descriptor? then
-        cdl_error( "S9999 $1 port cannot have Descriptor in its signature", dyn_ref  )
+        cdl_error( "S9999 $1 port '$2' cannot have Descriptor in its signature", dyn_ref, @name )
       end
 
     elsif @b_dynamic && @b_ref_desc then

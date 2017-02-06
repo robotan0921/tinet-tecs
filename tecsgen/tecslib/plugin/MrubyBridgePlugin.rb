@@ -33,7 +33,7 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: MrubyBridgePlugin.rb 2554 2016-02-27 06:11:34Z okuma-top $
+#   $Id: MrubyBridgePlugin.rb 2626 2017-02-05 11:49:44Z okuma-top $
 #
 
 # Todo:
@@ -699,6 +699,29 @@ EOT
   end
 
   def gen_preamble_instance( file, b_singleton, ct_name, global_ct_name )
+    # 「#1005  MrubyBridgePlugin-test のビルドに失敗」にて追加
+    # 「#1004 idx_is_id が true の場合(domain の場合は未指定でも true) の CBP のプロトタイプ宣言」にて不要になる見込み
+    nsp = NamespacePath.new( :nMruby, true )
+    nsp.append! ct_name
+    ct = Namespace.find nsp
+    if ct.idx_is_id_act? then
+      if ct.has_CB? then
+        inib_cb = "CB"
+      elsif ct.has_INIB? then
+        inib_cb = "INIB"
+      else
+        inib_cb = nil
+      end
+      if inib_cb then
+        ct.get_cell_list.each{ |cell|
+          if cell.is_generate? then
+            name_array = ct.get_name_array( cell )
+            file.print "extern #{ct.get_global_name}_CB  #{cell.get_global_name}_#{inib_cb};\n"
+          end
+        }
+      end
+    end
+
     file.print <<EOT
 
 /* RData MBP001 */
@@ -728,7 +751,6 @@ const struct name_to_cbp_#{@celltype_name} {
 } Name_to_cbp_#{@celltype_name}[] = {
 EOT
 
-    # mikan namespace
     nsp = NamespacePath.new( :nMruby, true )
     nsp.append! ct_name
     ct = Namespace.find nsp

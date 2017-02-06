@@ -34,10 +34,10 @@
 #   アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
 #   の責任を負わない．
 #  
-#   $Id: plugin.rb 2061 2014-05-31 22:15:33Z okuma-top $
+#   $Id: plugin.rb 2626 2017-02-05 11:49:44Z okuma-top $
 #++
 
-#== class モジュール
+#== Plugin クラス
 # ThroughPlugin, SignaturePlugin, CelltypePlugin に include する
 class Plugin < Node
 #@error_backlog:: [msg1, msg2, ... ]   @locale が設定される前に発生したエラー
@@ -284,8 +284,8 @@ class Plugin < Node
   end
 end
 
-#== 出力文字列を EUC から出力ファイルに convert する
-# tecsgen のソースコードは EUC で記述されている
+#== 出力文字列を utf-8 から出力ファイルに convert する
+# tecsgen のソースコードは utf-8 で記述されている
 # これを、出力ファイルの文字コードに変換して出力する
 #
 # generate.rb で出力するものは message.rb で変換している
