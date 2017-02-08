@@ -331,12 +331,14 @@ tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 	    memcmp(et_arph->shost, ether_broad_cast_addr, ETHER_ADDR_LEN) == 0)
 		goto err_ret;
 
+	T_IN4_ADDR myaddr = cFunctions_getIPv4Address();
+
 	/*
 	 *  送信ホストの IP アドレスが自分の場合は、重複しているので
 	 *  相手にも知らせる。
 	 *  ただし、自分と相手のアドレスが未定義（IPV4_ADDRANY）の時は何もしない。
 	 */
-	if ((saddr == ifp->in4_ifaddr.addr) && (saddr != IPV4_ADDRANY)) {
+	if ((saddr == myaddr) && (saddr != IPV4_ADDRANY)) {
 
 #ifdef ARP_CFG_CALLBACK_DUPLICATED
 
@@ -360,7 +362,7 @@ tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 
 #endif	/* of #ifdef ARP_CFG_CALLBACK_DUPLICATED */
 
-		}
+	}
 
 	/*
 	 *  以下の場合は何もしない。
@@ -369,7 +371,7 @@ tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 	 *      解決も行っているが、本実装では、自分以外の IP
 	 *      アドレスの解決は行わない。
 	 */
-	if (taddr != ifp->in4_ifaddr.addr)
+	if (taddr != myaddr)
 		goto buf_rel;
 
 	/*
@@ -393,12 +395,12 @@ tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 
 		pending = ent->hold;
 		ent->hold = NULL;
-		syscall(sig_sem(SEM_ARP_CACHE_LOCK));
+		cArpSemaphore_signal();
 
 		/* ペンディングされているフレームを送信する。*/
-		IF_RAW_OUTPUT(pending, TMO_FEVR);
+		//TODO: IF_RAW_OUTPUT(pending, TMO_FEVR);
 
-		}
+	}
 	else
 		cArpSemaphore_signal();
 
@@ -425,7 +427,8 @@ reply:
 	memcpy(eth->shost, macaddress, ETHER_ADDR_LEN);
 
 	/* ARP 応答を送信する。*/
-	IF_RAW_OUTPUT(input, TMO_FEVR);
+	cEthernetRawOutput_ethernetRawOutput((int8_t*)input, GET_IF_ARP_HDR_SIZE(input), TMO_FEVR);
+	// IF_RAW_OUTPUT(input, TMO_FEVR);
 	return;
 
 err_ret:
