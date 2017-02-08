@@ -352,9 +352,8 @@ skip_ipsec:
 
 	if ((is_cEthernetOutput_joined()) && (output->off.protocolflag & FLAG_USE_ETHER)) {
 syslog(LOG_EMERG,"Debug: cEthernetOutput_ethernetOutput");
-syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
-syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
-syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
+syslog(LOG_EMERG,"Debug: dstaddr(ip4h->dst) [IP] = %x", ntohl(ip4h->dst));
+syslog(LOG_EMERG,"Debug: dstaddr(gw) [IP] = %x", gw);
 		if ((ercd = cEthernetOutput_ethernetOutput(output, size, gw, tmout)) != E_OK)
 			return ercd;
 		return ercd;
@@ -438,7 +437,17 @@ eOutput_setHeader(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dstaddr
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	T_NET_BUF 	*output = (T_NET_BUF*)outputp;
+	T_IP4_HDR	*ip4h 	= GET_IP4_HDR(output);
+	// T_IP4_HDR	*ip4h 	= GET_IP4_HDR(output, output->off.ifhdrlen);
 
+	/* IP アドレスを設定する。*/
+	ip4h->dst	= htonl(dstaddr);
+
+	if (srcaddr == IPV4_ADDRANY)
+		ip4h->src = htonl(cFunctions_getIPv4Address());
+	else
+		ip4h->src = htonl(srcaddr);
 }
 
 /* #[<ENTRY_FUNC>]# eOutput_IPv4Reply
