@@ -230,8 +230,8 @@ skip_ipsec:
 	ip4h->type	= 0;
 	ip4h->id	= ip4h->flg_off = ip4h->sum = 0;
 
-	gw = in4_rtalloc(ntohl(ip4h->dst));
-	//TODO: gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
+	// gw = in4_rtalloc(ntohl(ip4h->dst));
+	gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
 
 	/*
 	 *  データグラムサイズがネットワークの MTU を超えていれば、
@@ -295,13 +295,13 @@ skip_ipsec:
 			off += IF_MTU - IP4_HDR_SIZE;
 		}
 		syscall(rel_net_buf(output));
-		frag_id ++;
+		VAR_fragId ++;
 		NET_COUNT_MIB(ip_stats.ipFragOKs, 1);
 	}
 	else {
 		/* ヘッダを埋める。*/
-		ip4h->id  = htons(frag_id);
-		frag_id ++;
+		ip4h->id  = htons(VAR_fragId);
+		VAR_fragId ++;
 		ip4h->sum = 0;
 		ip4h->sum = cFunctions_checkSum((void*)ip4h, (uint_t)GET_IP4_HDR_SIZE(output));
 
@@ -334,24 +334,21 @@ skip_ipsec:
 	ip4h->type	= 0;
 	ip4h->id	= ip4h->flg_off = ip4h->sum = 0;
 
-	gw = in4_rtalloc(ntohl(ip4h->dst));
-	//TODO: gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
-
 	/* データグラムサイズがネットワークの MTU を超えていればエラー */
 	if (ntohs(ip4h->len) > IF_MTU)
 		return E_PAR;
 
 	/* ヘッダを埋める。*/
-	ip4h->id  = htons(frag_id);
-	frag_id ++;
+	ip4h->id  = htons(VAR_fragId);
+	VAR_fragId ++;
 	ip4h->sum = 0;
 	ip4h->sum = cFunctions_checkSum((void*)ip4h, (uint_t)GET_IP4_HDR_SIZE(output));
 
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_OCTETS], ntohs(ip4h->len));
 	NET_COUNT_IP4(net_count_ip4[NC_IP4_OUT_PACKETS], 1);
 
-	gw = in4_rtalloc(ntohl(ip4h->dst));
-	//TODO: gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
+	// gw = in4_rtalloc(ntohl(ip4h->dst));
+	gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
 
 	if ((is_cEthernetOutput_joined()) && (output->off.protocolflag & FLAG_USE_ETHER)) {
 syslog(LOG_EMERG,"Debug: cEthernetOutput_ethernetOutput");
@@ -462,6 +459,28 @@ eOutput_IPv4Reply(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	T_NET_BUF 	*output = (T_NET_BUF*)outputp;
+	T_IP4_HDR	*ip4h;
+	T_IN4_ADDR	gw;
+
+	//TODO: ip4h = GET_IP4_HDR(output,output->off.ifhdrlen);
+	ip4h = GET_IP4_HDR(output);
+
+	/* ヘッダを埋める。*/
+	ip4h->id  = htons(VAR_fragId);
+	VAR_fragId ++;
+	ip4h->sum = 0;
+	ip4h->sum = cFunctions_checkSum((void*)ip4h, (uint_t)GET_IP4_HDR_SIZE(output));
+
+	syslog(LOG_EMERG,"IPv4 REPLY dst is %d ~~~ %d",(0xFF & ip4h->dst),ip4h->dst>>24 );
+
+	gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
+
+	if ((output->off.protocolflag & FLAG_USE_ETHER) && is_cEthernetOutput_joined()) {
+		return cEthernetOutput_ethernetOutput(outputp, size, gw, tmout);
+	}
+
+	eOutput_IPv4Reply_outputp_dealloc((void*)outputp);
 
 	return(ercd);
 }
