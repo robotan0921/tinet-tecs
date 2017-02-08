@@ -129,7 +129,7 @@ eRoutingTable_routeAlloc(T_IN4_ADDR dst)
 	if(IN4_IS_ADDR_MULTICAST(dst))
 		return dst;
 #endif /* of #ifdef ETHER_CFG_MULTICAST */
-
+#if 0
 	for (ix = NUM_IN4_ROUTE_ENTRY; ix --; )
 		if ((routing4_tbl[ix].flags & IN_RTF_DEFINED) &&
 		    (dst & routing4_tbl[ix].mask) == routing4_tbl[ix].target) {
@@ -140,8 +140,9 @@ eRoutingTable_routeAlloc(T_IN4_ADDR dst)
 		}
 
 	return dst;
-#if 0 /* TODO */
-for (ix = ATTR_numStaticEntry; ix --; )
+#endif 	/* of #if 0 */
+#if 1 /* TODO */
+	for (ix = ATTR_numStaticEntry; ix --; )
 		if ((ATTR_staticRoutingTable[ix].flags & IN_RTF_DEFINED) &&
 		    (dst & ATTR_staticRoutingTable[ix].mask) == ATTR_staticRoutingTable[ix].target) {
 			if (ATTR_staticRoutingTable[ix].gateway == 0)
@@ -151,7 +152,7 @@ for (ix = ATTR_numStaticEntry; ix --; )
 			}
 		}
 
-	for(ix = ATTR_numRedirectEntry; ix --; )
+	for (ix = ATTR_numRedirectEntry; ix --; )
 	  	if ((VAR_routingTable[ix].flags & IN_RTF_DEFINED) &&
 		  (dst & VAR_routingTable[ix].mask) == VAR_routingTable[ix].target) {
 			if (VAR_routingTable[ix].gateway == 0)
