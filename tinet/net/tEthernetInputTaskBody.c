@@ -135,8 +135,6 @@
 
 #include <net/if_var.h>
 
-extern T_IFNET ether_ifnet;
-
 #ifdef SUPPORT_MIB
 extern T_IF_STATS if_stats;
 #endif
@@ -172,8 +170,8 @@ eTaskBody_main(CELLIDX idx)
 	uint16_t	proto;
 	uint8_t		rcount = 0;
 	int32_t 	size;
-	uint8_t macaddress[6];
-	T_OFF_BUF etheroff = {0, 0, 0, ETHER_HDR_SIZE, ETHER_MTU, NETBUFFER_ALIGN, FLAG_USE_ETHER, 0, 0};
+	uint8_t 	macaddress[6];
+	T_OFF_BUF 	etheroff = {0, 0, 0, ETHER_HDR_SIZE, ETHER_MTU, NETBUFFER_ALIGN, FLAG_USE_ETHER, 0, 0};
 
 	/* ネットワークインタフェース管理を初期化する。*/
 	ifinit();
@@ -182,27 +180,23 @@ eTaskBody_main(CELLIDX idx)
 
 #if defined(_IP4_CFG)
 
-	ether_ifnet.in4_ifaddr.addr = IPV4_ADDR_LOCAL;		/* IPv4 アドレス		*/
-	ether_ifnet.in4_ifaddr.mask = IPV4_ADDR_LOCAL_MASK;	/* サブネットマスク		*/
+	// ether_ifnet.in4_ifaddr.addr = IPV4_ADDR_LOCAL;		/* IPv4 アドレス		*/
+	// ether_ifnet.in4_ifaddr.mask = IPV4_ADDR_LOCAL_MASK;	/* サブネットマスク		*/
 
 #endif	/* of #if defined(_IP4_CFG) */
 
 	/* NIC を初期化する。*/
-	ic = IF_ETHER_NIC_GET_SOFTC();
-	IF_ETHER_NIC_PROBE(ic);
 	cNicDriver_init();
 	cNicDriver_probe(macaddress);
 
 	/* Ethernet 出力タスクを起動する */
-	if( is_cTaskEthernetOutput_joined() )
+	if(is_cTaskEthernetOutput_joined())
 		cTaskEthernetOutput_activate();
 
 	/* ネットワークタイマタスクを起動する */
-	//syscall(act_tsk(NET_TIMER_TASK));
 	cTaskNetworkTimer_activate();
 
 	get_tid(&tskid);
-
 	syslog(LOG_NOTICE, "[ETHER INPUT:%2d] started on MAC Addr: %s.",
 	                   tskid, mac2str(NULL, macaddress));
 
@@ -214,10 +208,9 @@ eTaskBody_main(CELLIDX idx)
 
 #endif	/* of #if defined(_IP4_CFG) */
 
-	ether_ifnet.ic = ic;
-
 	/* 乱数生成を初期化する。*/
 	net_srand(0);
+	//TODO: netSrand(0);
 
 	while (true) {
 		cSemaphoreReceive_wait();
