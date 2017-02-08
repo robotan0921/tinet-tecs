@@ -3767,9 +3767,6 @@ syslog(LOG_EMERG,"Debug: error = %d [4]", error);
 #endif	/* of #ifdef TCP_CFG_TRACE */
 
 syslog(LOG_EMERG,"Debug: cTCPOutput");
-syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
-syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
-syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
 	/* ネットワーク層 (IP) の出力関数を呼び出す。*/
 	if ((error = cTCPOutput_output(output, size, cGetAddress_getDstAddress(), cGetAddress_getMyAddress(), ATTR_ipLength)) != E_OK)
 		goto err_ret;

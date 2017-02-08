@@ -138,6 +138,7 @@ eEthernetOutput_ethernetOutput(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4
 		GET_ETHER_HDR(output)->type = htons(ETHER_TYPE_IP);
 		if (is_cArpOutput_joined()) {
 syslog(LOG_EMERG, "Debug: cArpOutput_arpResolve");
+syslog(LOG_EMERG, "Debug: dstaddr [ARP] = %x", dstaddr);
 			return cArpOutput_arpResolve(outputp, size, dstaddr, mymac, tmout);
 		}
 	}

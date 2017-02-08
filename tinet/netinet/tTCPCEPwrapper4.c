@@ -20,7 +20,7 @@
  *   ER_UINT        cAPI_receive( int8_t* data, int32_t len, TMO tmout );
  *   ER             cAPI_cancel( FN fncd );
  *   ER             cAPI_close( TMO tmout );
- *   ER             cAPI_shutdown( );
+*   ER             cAPI_shutdown( );
  *
  * #[</PREAMBLE>]# */
 
@@ -61,7 +61,7 @@ eAPI4_accept(CELLIDX idx, Descriptor( sREP4 ) desc, T_IPV4EP* dstep4, TMO tmout)
 	/* Put statements here #_TEFB_# */
 	uint16_t dstport;
 
-	/* p_dstaddr Ç™ NULL Ç©ÅAtmout Ç™ TMO_NBLK Ç»ÇÁÉGÉâÅ[ */
+	/* p_dstaddr = NULL „ÇÇ„Åó„Åè„ÅØ tmout = TMO_NBLK „Å™„Çâ„Ç®„É©„Éº */
 	if (dstep4 == NULL || tmout == TMO_NBLK)
 	  return E_PAR;
 

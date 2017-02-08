@@ -216,7 +216,6 @@ eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dst
 	if (dstaddr == IPV4_ADDR_BROADCAST ||
 	    dstaddr == (( src & mask ) | ~mask )) {
 		memcpy(eth->dhost, ether_broad_cast_addr, ETHER_ADDR_LEN);
-syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [1]");
 		return cEthernetRawOutput_ethernetRawOutput(output, size, tmout);
 	}
 
@@ -226,7 +225,6 @@ syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [1]");
 	if (ent->expire) {
 		memcpy(eth->dhost, ent->mac_addr, ETHER_ADDR_LEN);
 		cArpSemaphore_signal();
-syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [2]");
 		return cEthernetRawOutput_ethernetRawOutput(output, size, tmout);
 	}
 	else {
@@ -251,6 +249,9 @@ syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [2]");
 		cArpSemaphore_signal();
 
 		/* アドレス解決要求を送信する。*/
+T_IN4_ADDR tempaddr = (T_IN4_ADDR)(((uint32_t)(192)<<24)|((uint32_t)(168)<<16)|((uint32_t)(1)<<8)|(56)); //MAKE_IPV4_ADDR(192.168.1.56);
+syslog(LOG_EMERG, "Debug: tempaddr = %x", tempaddr);
+syslog(LOG_EMERG, "Debug: dstaddr = %x", dstaddr);
 		return tecs_arp_request(p_cellcb, macaddress, dstaddr);
 	}
 }
@@ -503,7 +504,6 @@ tecs_arp_request (CELLCB *p_cellcb, const uint8_t *macaddress, T_IN4_ADDR dst)
 	NET_COUNT_ARP(net_count_arp.out_octets , IF_ARP_ETHER_HDR_SIZE - IF_HDR_SIZE);
 	NET_COUNT_ARP(net_count_arp.out_packets, 1);
 
-syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [3]");
 	if ((error = cEthernetRawOutput_ethernetRawOutput_outputp_alloc((void **)&arp_req,
 				IF_ARP_ETHER_HDR_SIZE, TMO_ARP_GET_NET_BUF)) == E_OK) {
 
@@ -528,9 +528,6 @@ syslog(LOG_EMERG, "Debug: cEthernetRawOutput_ethernetRawOutput [3]");
 		memset(et_arph->thost, 0, ETHER_ADDR_LEN);
 		ahtonl(et_arph->sproto, src);
 		ahtonl(et_arph->tproto, dst);
-syslog(LOG_EMERG, "Debug: arp_req->len = %d", arp_req->len);
-syslog(LOG_EMERG, "Debug: arp_req->flags = 0x%x", arp_req->flags);
-syslog(LOG_EMERG, "Debug: arp_req->buf = %s", arp_req->buf);
 		/* 送信する。*/
 		error = cEthernetRawOutput_ethernetRawOutput((int8_t*)arp_req, GET_IF_ARP_HDR_SIZE(input), TMO_ARP_OUTPUT);
 	}

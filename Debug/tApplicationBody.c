@@ -108,7 +108,7 @@ eTaskBody_main()
 		data[i] = 10;
 
 	T_IN4_ADDR myaddr  = MYIP4ADDRESS;
-	T_IN4_ADDR dstaddr = MAKE_IPV4_ADDR(192,168,1,56);
+	// T_IN4_ADDR dstaddr = MAKE_IPV4_ADDR(192,168,1,56);
 
     cRepSelector_getRep(&desc, 0);
 	error = cTCPAPI4_accept(desc, &dstep4, TMO_FEVR);

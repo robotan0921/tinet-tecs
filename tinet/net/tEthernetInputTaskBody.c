@@ -135,6 +135,8 @@
 
 #include <net/if_var.h>
 
+extern T_IFNET ether_ifnet;
+
 #ifdef SUPPORT_MIB
 extern T_IF_STATS if_stats;
 #endif
@@ -180,8 +182,8 @@ eTaskBody_main(CELLIDX idx)
 
 #if defined(_IP4_CFG)
 
-	// ether_ifnet.in4_ifaddr.addr = IPV4_ADDR_LOCAL;		/* IPv4 アドレス		*/
-	// ether_ifnet.in4_ifaddr.mask = IPV4_ADDR_LOCAL_MASK;	/* サブネットマスク		*/
+	ether_ifnet.in4_ifaddr.addr = IPV4_ADDR_LOCAL;		/* IPv4 アドレス		*/
+	ether_ifnet.in4_ifaddr.mask = IPV4_ADDR_LOCAL_MASK;	/* サブネットマスク		*/
 
 #endif	/* of #if defined(_IP4_CFG) */
 

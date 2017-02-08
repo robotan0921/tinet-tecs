@@ -334,7 +334,9 @@ syslog(LOG_EMERG, "Debug: ethernet_send");
     ethernet_send();
 syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
 syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
-syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
+syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x %02x %02x", output->buf[0], output->buf[1], output->buf[2], output->buf[3], output->buf[4], output->buf[5]);
+syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x %02x %02x", output->buf[6], output->buf[7], output->buf[8], output->buf[9], output->buf[10], output->buf[11]);
+syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x %02x %02x", output->buf[12], output->buf[13], output->buf[14], output->buf[15], output->buf[16], output->buf[17]);
 
 }
 

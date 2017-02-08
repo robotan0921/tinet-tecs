@@ -168,7 +168,6 @@ eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmo
 	T_NET_BUF *output = (T_NET_BUF*)outputp;	// TODO
 
 	/* Ethernet 出力キューに投入する。*/
-syslog(LOG_EMERG, "Debug: Send dataqueue");
 	if ((ercd = tsnd_dtq(DTQ_ETHER_OUTPUT, (intptr_t)output, tmout)) != E_OK) {
 	//TODO: if((ercd = cDataqueue_sendTimeout((intptr_t)outputp,tmout)) != E_OK) {
 		NET_COUNT_ETHER(net_count_ether.out_err_packets, 1);
@@ -219,7 +218,6 @@ eTaskBody_main(CELLIDX idx)
 
 	while (true) {
 		while (rcv_dtq(DTQ_ETHER_OUTPUT, (intptr_t*)&output) == E_OK) {
-syslog(LOG_EMERG, "Debug: Recieve dataqueue");
 			// TODO: cDataqueue_receive((intptr_t*)&output)
 			NET_COUNT_ETHER(net_count_ether.out_octets,  output->len);
 			NET_COUNT_MIB(if_stats.ifOutOctets, output->len + 8);
@@ -236,10 +234,6 @@ syslog(LOG_EMERG, "Debug: Recieve dataqueue");
 
 			size = output->len + sizeof(T_NET_BUF) -4 + NETBUFFER_ALIGN;
 			cSemaphoreSend_wait();
-syslog(LOG_EMERG, "Debug: cNicDriver_start");
-syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
-syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
-syslog(LOG_EMERG, "Debug: output->buf = 0x%x", output->buf);
 			cNicDriver_start((int8_t *)output, size, NETBUFFER_ALIGN);
 
 #ifndef ETHER_NIC_CFG_RELEASE_NET_BUF

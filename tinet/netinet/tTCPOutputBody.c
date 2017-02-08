@@ -209,15 +209,12 @@ eTCPOutput_output(CELLIDX idx, int8_t* outputp, int32_t size, const int8_t* dsta
 		T_IN4_ADDR dst = *((T_IN4_ADDR*)dstaddr);
 		T_IN4_ADDR src = *((T_IN4_ADDR*)srcaddr);
 
+syslog(LOG_EMERG,"Debug: dstaddr [TCP] = %x", dst);
 		cIPv4Output_setHeader(output, size, dst, src);
 
 		T_TCP_HDR *tcph = GET_TCP_HDR(output, output->off.ifhdrlen + output->off.iphdrlenall);
 		tcph->sum 		= cIPv4CheckSum_ipv4CheckSum(outputp, size, output->off.ifhdrlen + output->off.iphdrlenall, IPPROTO_TCP);
 
-syslog(LOG_EMERG,"Debug: cIPv4Output_IPv4Output");
-syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
-syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
-syslog(LOG_EMERG, "Debug: output->buf = %s", output->buf);
 		return cIPv4Output_IPv4Output(outputp, size, TMO_TCP_OUTPUT);
 	}
 

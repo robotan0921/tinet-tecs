@@ -142,7 +142,7 @@ eRoutingTable_routeAlloc(T_IN4_ADDR dst)
 	return dst;
 #endif 	/* of #if 0 */
 #if 1 /* TODO */
-	for (ix = ATTR_numStaticEntry; ix --; )
+	for (ix = ATTR_numStaticEntry; ix --; ) {
 		if ((ATTR_staticRoutingTable[ix].flags & IN_RTF_DEFINED) &&
 		    (dst & ATTR_staticRoutingTable[ix].mask) == ATTR_staticRoutingTable[ix].target) {
 			if (ATTR_staticRoutingTable[ix].gateway == 0)
@@ -151,6 +151,7 @@ eRoutingTable_routeAlloc(T_IN4_ADDR dst)
 				return ATTR_staticRoutingTable[ix].gateway;
 			}
 		}
+	}
 
 	for (ix = ATTR_numRedirectEntry; ix --; )
 	  	if ((VAR_routingTable[ix].flags & IN_RTF_DEFINED) &&
