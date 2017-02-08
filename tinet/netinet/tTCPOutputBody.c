@@ -148,8 +148,8 @@ eTaskBody_main(CELLIDX idx)
 	get_tid(&tskid);
 	syslog(LOG_NOTICE, "[TCP OUTPUT:%d] started.", tskid);
 
-	tcp_init();
-	//TODO: cNetworkTimer_timeout(5);
+	// tcp_init();
+	cNetworkTimer_timeout(5);
 
 #ifdef _IP6_CFG
 
@@ -354,25 +354,26 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 	/*
 	 *  チェックサムを設定する。
 	 */
-	hdr_offset = IF_IP_TCP_HDR_OFFSET(output);
-	tcph->sum = IN_CKSUM(output, IPPROTO_TCP, hdr_offset,
-	                     (uint_t)GET_TCP_HDR_SIZE(output, hdr_offset));
-	//TODO: tcph->sum = cIPv4CheckSum_ipv4CheckSum(outputp,size, output->off.ifhdrlen + output->off.iphdrlen, IPPROTO_TCP);
+	if (output->off.protocolflag & FLAG_USE_IPV4) {
+		hdr_offset = IF_IP_TCP_HDR_OFFSET(output);
+		// tcph->sum = IN_CKSUM(output, IPPROTO_TCP, hdr_offset,
+		//                      (uint_t)GET_TCP_HDR_SIZE(output, hdr_offset));
+		tcph->sum = cIPv4CheckSum_ipv4CheckSum(outputp,size, output->off.ifhdrlen + output->off.iphdrlen, IPPROTO_TCP);
 
-	/* ネットワークバッファ長を調整する。*/
-	output->len = (uint16_t)GET_IF_IP_TCP_HDR_SIZE(output, hdr_offset);
+		/* ネットワークバッファ長を調整する。*/
+		output->len = (uint16_t)GET_IF_IP_TCP_HDR_SIZE(output, hdr_offset);
 
 #ifdef TCP_CFG_TRACE
 
-	tcp_output_trace(output, cep);
+		tcp_output_trace(output, cep);
 
 #endif	/* of #ifdef TCP_CFG_TRACE */
 
-	/* ネットワーク層 (IP) の出力関数を呼び出す。*/
-	IP_OUTPUT(output, TMO_TCP_OUTPUT);
-	//TODO: if(is_cIPv4Output_joined())
-		  //TODO: return cIPv4Output_IPv4Reply(outputp,size,TMO_TCP_OUTPUT);
-
+		/* ネットワーク層 (IP) の出力関数を呼び出す。*/
+		// IP_OUTPUT(output, TMO_TCP_OUTPUT);
+		if (is_cIPv4Output_joined())
+			return cIPv4Output_IPv4Reply(outputp, size, TMO_TCP_OUTPUT);
+	}
 	return E_ID;
 }
 

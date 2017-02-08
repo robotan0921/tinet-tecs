@@ -110,7 +110,7 @@
 
 #include <net/if_var.h>
 
-static void icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff);
+static void icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, int32_t size);
 static void icmp_unreach (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff);
 static void icmp_redirect (T_NET_BUF *input, uint_t ihoff);
 
@@ -151,9 +151,9 @@ eICMP4_input(CELLIDX idx, int8_t* inputp, int32_t size)
 	T_IN4_ADDR	addr;
 	uint32_t	len, align, hlen;
 
-	int32_t icmpoff = size;	//TODO
-	//int32_t icmpoff = GET_IP4_HDR_SIZE(input);
-	//TODO: int32_t icmpoff = input->off.ifhdrlen + GET_IP4_HDR_SIZE(iph);
+	// int32_t icmpoff = size;	//TODO
+	// int32_t icmpoff = GET_IP4_HDR_SIZE(input);
+	int32_t icmpoff = input->off.ifhdrlen + GET_IP4_HDR_SIZE(input);
 
 	NET_COUNT_ICMP4(net_count_icmp4.in_octets,
 	               input->len - GET_IF_IP4_HDR_SIZE(input));
@@ -179,8 +179,8 @@ eICMP4_input(CELLIDX idx, int8_t* inputp, int32_t size)
 		memset((uint8_t*)input->buf + input->len, 0, (size_t)(align - len));
 
 	/* チェックサムを計算する。*/
-	if (in_cksum(icmp4h, align) != 0) {
-	//TODO: if (in_cksum(icmp4h, align) != 0) {
+	// if (in_cksum(icmp4h, align) != 0) {
+	if (cIPv4Functions_checkSum(icmp4h, align) != 0) {
 		NET_COUNT_ICMP4(net_count_icmp4.in_err_packets, 1);
 		goto buf_rel;
 	}
@@ -330,7 +330,7 @@ eICMP4Error_error(CELLIDX idx, int8_t* inputp, int32_t size, uint8_t code)
  */
 
 static void
-icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff)
+icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, int32_t size)
 {
 	T_IP4_HDR	*ip4h;
 	T_ICMP4_HDR	*icmp4h;
@@ -347,10 +347,10 @@ icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff)
 		 *  メッセージの型をエコー要求 (8) から
 		 *  エコー応答 (0) に変更して送り返す。
 		 */
-		//TODO: icmpoff = input->off.ifhdrlen + GET_IP4_HDR_SIZE(ip4h);
+		icmpoff = input->off.ifhdrlen + GET_IP4_HDR_SIZE(input);
 
-		icmp4h = GET_ICMP4_HDR(input, ihoff);
-		//TODO: icmp4h = GET_ICMP4_HDR(input, icmpoff);
+		// icmp4h = GET_ICMP4_HDR(input, ihoff);
+		icmp4h = GET_ICMP4_HDR(input, icmpoff);
 		icmp4h->type = ICMP4_ECHO_REPLY;
 
 		/*
@@ -363,9 +363,9 @@ icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff)
 
 		/* チェックサムを計算する。*/
 		icmp4h->sum = 0;
-		icmp4h->sum = in_cksum(icmp4h,
-		                       (uint_t)(((input->len - GET_IF_IP4_HDR_SIZE(input)) + 3) >> 2 << 2));
-		//TODO: icmp4h->sum = cIPv4Functions_checkSum(icmp4h,(uint_t)(((input->len +input->off.ifalign- icmpoff)) + 3) >> 2 << 2);
+		// icmp4h->sum = in_cksum(icmp4h,
+		//                        (uint_t)(((input->len - GET_IF_IP4_HDR_SIZE(input)) + 3) >> 2 << 2));
+		icmp4h->sum = cIPv4Functions_checkSum(icmp4h, (uint_t)(((input->len + input->off.ifalign - icmpoff)) + 3) >> 2 << 2);
 
 		/* 送信する。*/
 		NET_COUNT_ICMP4(net_count_icmp4.out_octets,
@@ -373,8 +373,8 @@ icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff)
 		NET_COUNT_ICMP4(net_count_icmp4.out_packets, 1);
 		NET_COUNT_MIB(icmp_stats.icmpOutMsgs, 1);
 		NET_COUNT_MIB(icmp_stats.icmpOutEchoReps, 1);
-		ip_output(input, TMO_ICMP_OUTPUT);
-		//TODO: cIPv4Reply_IPv4Reply((int8_t*)input,size,TMO_ICMP_OUTPUT);
+		// ip_output(input, TMO_ICMP_OUTPUT);
+		cIPv4Reply_IPv4Reply((int8_t*)input, size, TMO_ICMP_OUTPUT);
 	}
 }
 
@@ -412,7 +412,7 @@ icmp_unreach (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff)
 
 	ip4h   = (T_IP4_HDR*)GET_ICMP4_SDU(input, ihoff);
 
-	//TODO: 	int32_t icmpoff = input->off.ifhdrlen + GET_IP4_HDR_SIZE(ip4h);
+	int32_t icmpoff = input->off.ifhdrlen + GET_IP4_HDR_SIZE(input);
 
 	code  = GET_ICMP4_HDR(input, ihoff)->code;
 	error = code2error[code];
@@ -426,8 +426,8 @@ icmp_unreach (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff)
 #if defined(SUPPORT_TCP)
 
 		if (ip4h->proto == IPPROTO_TCP)
-			tcp_notify(input, error);
-			//TODO: cTCPInput_TCPNotify(input, input->len + sizeof(T_NET_BUF), error);
+			// tcp_notify(input, error);
+			cTCPInput_TCPNotify(input, input->len + sizeof(T_NET_BUF), error);
 
 #endif	/* of #if defined(SUPPORT_TCP) */
 

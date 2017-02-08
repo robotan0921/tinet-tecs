@@ -231,4 +231,8 @@ typedef struct t_tcp_cep {
 #define RET_DROP		(-1)
 #define RET_RST_DROP	(-2)
 
+
+#define GET_TCP_HDR_SIZE2(nbuf,thoff)	(TCP_HDR_LEN(GET_TCP_HDR(nbuf,thoff)->doff))
+
+
 #endif	/* of #ifndef _TECS_TCP_VAR_H_ */
