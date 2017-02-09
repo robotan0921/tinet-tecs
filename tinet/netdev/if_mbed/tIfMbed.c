@@ -134,8 +134,16 @@
 extern uint8_t mac_addr[ETHER_ADDR_LEN];
 
 #define ETHER_EESR0_TC 0x00200000
-
-
+#define EDMAC_EESIPR_INI_TRANS  (0xF4380000)
+#define EDMAC_EESIPR_INI_RECV   (0x0205001F)    /* 0x02000000 : Detect reception suspended */
+                                                /* 0x00040000 : Detect frame reception */
+                                                /* 0x00010000 : Receive FIFO overflow */
+                                                /* 0x00000010 : Residual bit frame reception */
+                                                /* 0x00000008 : Long frame reception */
+                                                /* 0x00000004 : Short frame reception */
+                                                /* 0x00000002 : PHY-LSI reception error */
+                                                /* 0x00000001 : Receive frame CRC error */
+#define EDMAC_EESIPR_INI_EtherC (0x00400000)    /* 0x00400000 : E-MAC status register */
 
 /* ネットワークインタフェースに依存するソフトウェア情報 */
 static T_MBED_SOFTC mbed_softc;
@@ -334,10 +342,8 @@ syslog(LOG_EMERG, "Debug: ethernet_send");
     ethernet_send();
 syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
 syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
-syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x %02x %02x", output->buf[0], output->buf[1], output->buf[2], output->buf[3], output->buf[4], output->buf[5]);
-syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x %02x %02x", output->buf[6], output->buf[7], output->buf[8], output->buf[9], output->buf[10], output->buf[11]);
-syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x %02x %02x", output->buf[12], output->buf[13], output->buf[14], output->buf[15], output->buf[16], output->buf[17]);
-
+for (int i =0; i<output->len; i+=4 )
+	syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x", output->buf[i], output->buf[i+1], output->buf[i+2], output->buf[i+3]);
 }
 
 /* #[<ENTRY_FUNC>]# eNicDriver_read
@@ -537,11 +543,25 @@ if_mbed_watchdog (T_IF_SOFTC *ic) {
  */
 void	// TODO: Componentize (TECS)
 if_mbed_eth_handler (void) {
-	if ((ETHER.EESR0 & ETHER_EESR0_TC) != 0) {
-		/* 送信割り込み処理 */
+    uint32_t stat_edmac;
+    uint32_t stat_etherc;
+
+    /* Clear the interrupt request flag */
+    stat_edmac = (ETHER.EESR0 & ETHER.EESIPR0);       /* Targets are restricted to allowed interrupts */
+    ETHER.EESR0 = stat_edmac;
+    /* Reception-related */
+    if (stat_edmac & EDMAC_EESIPR_INI_RECV) {
+		// isig_sem(if_softc.semid_rxb_ready);
+		isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
+    }
+	if (stat_edmac & EDMAC_EESIPR_INI_TRANS) {
 		// isig_sem(if_softc.semid_txb_ready);
 		isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
 	}
-
-	INT_Ether();
+    /* E-MAC-related */
+    if (stat_edmac & EDMAC_EESIPR_INI_EtherC) {
+        /* Clear the interrupt request flag */
+        stat_etherc = (ETHER.ECSR0 & ETHER.ECSIPR0);  /* Targets are restricted to allowed interrupts */
+        ETHER.ECSR0  = stat_etherc;
+    }
 }
