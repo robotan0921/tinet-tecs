@@ -1,7 +1,7 @@
 #ifndef _TECS_ETHERNET_H_
 #define _TECS_ETHERNET_H_
 
-#if 1	/* 4バイト境界に合わせる必要があるなら */
+#if 0	/* 4バイト境界に合わせる必要があるなら */
 #define NETBUFFER_ALIGN 2
 #else
 #define NETBUFFER_ALIGN 0
