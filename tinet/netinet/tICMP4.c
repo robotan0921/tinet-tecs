@@ -160,7 +160,8 @@ eICMP4_input(CELLIDX idx, int8_t* inputp, int32_t size)
 	NET_COUNT_ICMP4(net_count_icmp4.in_packets, 1);
 
 	/* ICMP ヘッダの長さをチェックする。*/
-	if (input->len < IF_IP4_ICMP4_HDR_SIZE) {
+	if (input->len < icmpoff + ICMP4_HDR_SIZE - input->off.ifalign) {
+	// if (input->len < IF_IP4_ICMP4_HDR_SIZE) {
 		NET_COUNT_ICMP4(net_count_icmp4.in_err_packets, 1);
 		NET_COUNT_MIB(icmp_stats.icmpInErrors, 1);
 		goto buf_rel;
@@ -405,9 +406,9 @@ icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, int32_t size)
 
 		/* チェックサムを計算する。*/
 		icmp4h->sum = 0;
-		// icmp4h->sum = in_cksum(icmp4h,
-		//                        (uint_t)(((input->len - GET_IF_IP4_HDR_SIZE(input)) + 3) >> 2 << 2));
-		icmp4h->sum = cIPv4Functions_checkSum(icmp4h, (uint_t)(((input->len + input->off.ifalign - icmpoff)) + 3) >> 2 << 2);
+		icmp4h->sum = cIPv4Functions_checkSum(icmp4h, (uint_t)(((input->len - GET_IF_IP4_HDR_SIZE(input)) + 3) >> 2 << 2));
+		//TODO: icmp4h->sum = cIPv4Functions_checkSum(icmp4h, (uint_t)(((input->len - icmpoff)) + 3) >> 2 << 2);
+		// icmp4h->sum = cIPv4Functions_checkSum(icmp4h, (uint_t)(((input->len + input->off.ifalign - icmpoff)) + 3) >> 2 << 2);
 
 		/* 送信する。*/
 		NET_COUNT_ICMP4(net_count_icmp4.out_octets,
