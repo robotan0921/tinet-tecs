@@ -3539,7 +3539,8 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 	tcph->sum	= tcph->flags = 0;
 
 	/* ネットワークバッファ長を調整する。*/
-    output->len = (uint16_t)(offset + TCP_HDR_SIZE + optlen + len - output->off.ifalign);   /* output->len の長さが足りないので怪しい */Dsize = output->len + sizeof(T_NET_BUF) - 4;
+    output->len = (uint16_t)(offset + TCP_HDR_SIZE + optlen + len - output->off.ifalign);   /* output->len の長さが足りないので怪しい */
+    size = output->len + sizeof(T_NET_BUF) - 4;
 
 	/*
 	 *  TCP オプションの設定を行う。
