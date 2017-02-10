@@ -116,11 +116,12 @@ eTaskBody_main()
 	syslog(LOG_EMERG, "Debug: portno = 0x%x", dstep4.portno);
 
 	while((rlen = cTCPAPI4_receive(data, 100, TMO_FEVR)) > 0) {
+		syslog(LOG_EMERG, "rlen = %d", rlen);
+		for(i = 0; i < 30; i++)
+			syslog(LOG_EMERG, "Debug: data[%d] = %d", i, data[i]);
 		data[20] = '\0';
 		cTCPAPI4_send(data, rlen, TMO_FEVR);
 	}
-
-	syslog(LOG_EMERG, "rlen = %d", rlen);
 
 	syslog(LOG_EMERG, "Application ended!! [ID:%d]", tskid);
 }

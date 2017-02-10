@@ -292,7 +292,7 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 
 	if ((flags & TCP_FLG_RST) == 0)
 		win = rbfree;
-
+//TODO:
 	/*
 	 *  output が NULL でなければ、これは入力したセグメントの
 	 *  net_buf で、そのまま再利用する。
@@ -309,6 +309,7 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 			return;
 		}
 
+		/* IP アドレスを交換する。*/
 		ip_exchg_addr(output);
 
 #if defined(_IP6_CFG)
@@ -322,6 +323,7 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 		SET_IP_SDU_SIZE(output, TCP_HDR_SIZE);
 
 		tcph = GET_TCP_HDR(output, IF_IP_TCP_HDR_OFFSET(output));
+		//TODO: tcph = GET_TCP_HDR(output, output->off.ifhdrlen + output->off.iphdrlen);
 
 		/* ポート番号を交換する。*/
 		portno 		= tcph->sport;
@@ -330,6 +332,7 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 
 		/* TCP ヘッダに情報を設定する。*/
 		tcph->doff = TCP_MAKE_DATA_OFF(TCP_HDR_SIZE);
+		output->off.tphdrlenall = TCP_HDR_SIZE;
 	}
 
 	/* cep が NULL であれば、何もしないで終了する。*/
