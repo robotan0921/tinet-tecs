@@ -695,13 +695,13 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 		syslog(LOG_INFO, "[TCP] unexp port: %d.", tcph->dport);
 		goto reset_drop;
 		}
+#endif /* of #if 0 */
 
 #ifdef TCP_CFG_TRACE
 
 	tcp_input_trace(input, cep);
 
 #endif	/* of #ifdef TCP_CFG_TRACE */
-#endif /* of #if 0 */
 
 	/* トランスポート層のヘッダ長を格納 */
 	input->off.tphdrlenall = tcphlen;
@@ -1098,11 +1098,11 @@ reset_drop:
 		rbfree = VAR_rbufSize - VAR_cep.rwbuf_count;
 
 	if (tcph->flags & TCP_FLG_ACK)
-		cTCPOutput_respond(inputp, size, NULL, 0, tcph->ack, rbfree, TCP_FLG_RST);
+		cTCPOutput_respond(inputp, size, cep, 0, tcph->ack, rbfree, TCP_FLG_RST);
 	else {
 		if (tcph->flags & TCP_FLG_SYN)
 			tcph->sum ++;		/* tcph->sum は SDU 長 */
-		cTCPOutput_respond(inputp, size, NULL, tcph->seq + tcph->sum, 0, rbfree, TCP_FLG_RST | TCP_FLG_ACK);
+		cTCPOutput_respond(inputp, size, cep, tcph->seq + tcph->sum, 0, rbfree, TCP_FLG_RST | TCP_FLG_ACK);
 	}
 
 	/* input は tcp_respoond で返却される。*/
@@ -1189,7 +1189,6 @@ eAPI_accept(CELLIDX idx, Descriptor( sREP4 ) desc, uint16_t* dstport, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	syslog(LOG_EMERG, "Debug: eAPI_accept");
     ER			error;
 	FLGPTN		flag;
 	T_IN4_ADDR 	my4addr;
@@ -1267,8 +1266,6 @@ eAPI_accept(CELLIDX idx, Descriptor( sREP4 ) desc, uint16_t* dstport, TMO tmout)
 	tecs_tcp_init_cep(p_cellcb);
 
 	/* TCP 受付口を得る。*/
-	// rep = GET_TCP_REP(repid);
-	// sREP4_cREP4_bind(sREP4);
     cREP4_set_descriptor(desc);
 
 #ifdef TCP_CFG_EXTENTIONS
@@ -1381,10 +1378,6 @@ eAPI_accept(CELLIDX idx, Descriptor( sREP4 ) desc, uint16_t* dstport, TMO tmout)
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
 
-    // cEstFlag_set(TCP_CEP_EVT_ESTABLISHED); //TODO:
-    T_RFLG rflg;
-    cEstFlag_refer(&rflg);
-    syslog(LOG_EMERG, "Debug: flgptn = 0x%0x", rflg.flgptn);
 		/*
 		 *  FSM が ESTABLISHED になるまで待つ。
 		 *  FSM が CLOSED になった場合は、エラーが発生したことを意味している。
@@ -1415,9 +1408,7 @@ eAPI_accept(CELLIDX idx, Descriptor( sREP4 ) desc, uint16_t* dstport, TMO tmout)
 			 *  通信端点から受付口を解放し、
 			 *  イベントフラグをクローズに設定する。
 			 */
-			//sREP4_cREP4_unbind();
             cREP4_unjoin();
-			// cep->rep = NULL;
 #if 0
 #if defined(_IP6_CFG) && defined(_IP4_CFG)
 			cep->rep4 = NULL;
@@ -1600,7 +1591,6 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-    syslog(LOG_EMERG, "Debug: [1]");
 	ER_UINT		error;
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
@@ -1624,12 +1614,10 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 	 */
 	if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_RCV_DAT)) != E_OK)
 		return error;
-    syslog(LOG_EMERG, "Debug: [2]");
 
 	/* 受信できるか、通信端点の状態を見る。*/
 	if (tecs_tcp_can_recv_more(&error, p_cellcb, TFN_TCP_RCV_DAT, tmout) != E_OK)
 		goto err_ret;
-    syslog(LOG_EMERG, "Debug: [3]");
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
 
@@ -1667,15 +1655,12 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 		if ((error = tecs_tcp_wait_rwbuf(p_cellcb, tmout)) != E_OK)
 			goto err_ret;
 
-    syslog(LOG_EMERG, "Debug: [4]");
 		/* 受信ウィンドバッファからデータを取り出す。*/
 		error = cCopySave_tcpReadRwbuf(&VAR_cep, data, len, VAR_rbuf, VAR_rbufSize);
 
-    syslog(LOG_EMERG, "Debug: [5]");
 		/* 相手にウィンドウサイズが変わったことを知らせるため出力をポストする。*/
 		VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
 		cSemaphoreTcppost_signal();
-    syslog(LOG_EMERG, "Debug: [6]");
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
 
@@ -1685,7 +1670,6 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 #endif 	/* of #if 0 */
 
 err_ret:
-    syslog(LOG_EMERG, "Debug: [7]");
 	VAR_cep.rcv_tskid = TA_NULL;
 	sTask_cCallingReceiveTask_unbind();
 	VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
@@ -1863,8 +1847,6 @@ tecs_tcp_output (CELLCB *p_cellcb)
 	uint_t	doff, win;
 	uint8_t	flags;
 
-syslog(LOG_EMERG, "Debug: tecs_tcp_output");
-syslog(LOG_EMERG, "Debug: VAR_flags = 0x%x", VAR_flags);
 	/*
 	 *  snd_una: 未確認の最小送信 SEQ	 または、確認された最大送信 SEQ
 	 *  snd_max: 送信した最大 SEQ
@@ -2062,7 +2044,6 @@ syslog(LOG_EMERG, "Debug: VAR_flags = 0x%x", VAR_flags);
 			 *  一致するときは送信する。
 			 */
 			if (len == VAR_cep.maxseg) {
-syslog(LOG_EMERG, "Debug: [1]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
@@ -2074,7 +2055,6 @@ syslog(LOG_EMERG, "Debug: [1]");
 			if ((idle || (VAR_flags & TCP_CEP_FLG_NO_DELAY)) &&
 			    (VAR_flags & TCP_CEP_FLG_NO_PUSH) == 0 &&
 			    len + doff >= VAR_cep.swbuf_count) {
-syslog(LOG_EMERG, "Debug: [2]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
@@ -2095,7 +2075,6 @@ syslog(LOG_EMERG, "Debug: [2]");
 			if ((VAR_flags & TCP_CEP_FLG_FORCE) ||
 			    (len >= VAR_cep.max_sndwnd / 2 && VAR_cep.max_sndwnd > 0) ||
 			    SEQ_LT(VAR_cep.snd_nxt, VAR_cep.snd_max)) {
-syslog(LOG_EMERG, "Debug: [3]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 				continue;
 			}
@@ -2125,9 +2104,7 @@ syslog(LOG_EMERG, "Debug: [3]");
 
 			if (adv     >= (long)(VAR_cep.maxseg * 2) ||
 			    adv * 2 >= (long) VAR_rbufSize) {
-syslog(LOG_EMERG, "Debug: [4]");
 				error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
-syslog(LOG_EMERG, "Debug: error = %d", error);
 				continue;
 			}
 		}
@@ -2136,15 +2113,12 @@ syslog(LOG_EMERG, "Debug: error = %d", error);
 		 *  ACK を送信する。
 		 */
 		if (VAR_flags & TCP_CEP_FLG_ACK_NOW) {
-syslog(LOG_EMERG, "Debug: Send Ack");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
-syslog(LOG_EMERG, "Debug: error = %d", error);
 			continue;
 		}
 
 		if ( (flags & TCP_FLG_RST) ||
 		    ((flags & TCP_FLG_SYN) && (VAR_flags & TCP_CEP_FLG_NEED_SYN) == 0)) {
-syslog(LOG_EMERG, "Debug: [5]");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
@@ -2152,7 +2126,6 @@ syslog(LOG_EMERG, "Debug: [5]");
 #ifdef TCP_CFG_EXTENTIONS
 
 		if (SEQ_GT(VAR_cep.snd_up, VAR_cep.snd_una)) {
-syslog(LOG_EMERG, "Debug: [6]");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
@@ -2169,7 +2142,6 @@ syslog(LOG_EMERG, "Debug: [6]");
 		 */
 		if ((flags & TCP_FLG_FIN) &&
 		    ((VAR_flags & TCP_CEP_FLG_SENT_FIN) == 0 || VAR_cep.snd_nxt == VAR_cep.snd_una)) {
-syslog(LOG_EMERG, "Debug: [7]");
 			error = tecs_send_segment(p_cellcb, &sendalot, doff, win, (uint_t)len, flags);
 			continue;
 		}
@@ -2647,13 +2619,8 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 	 *  受信できるか、fsm_state を見る。受信できない場合は
 	 *  長さ 0、またはエラーを返す。
 	 */
-    syslog(LOG_EMERG, "Debug: **1**");
-    syslog(LOG_EMERG, "Debug: VAR_cep.fsm_state = %d", VAR_cep.fsm_state);
-    syslog(LOG_EMERG, "Debug: VAR_cep.rwbuf_count = %d", VAR_cep.rwbuf_count);
-    syslog(LOG_EMERG, "Debug: VAR_cep.reassq = %d", VAR_cep.reassq);
 	if (!TCP_FSM_CAN_RECV_MORE(VAR_cep.fsm_state) &&
 	    VAR_cep.rwbuf_count == 0 && VAR_cep.reassq == NULL) {
-    syslog(LOG_EMERG, "Debug: **2**");
 		*error = VAR_cep.error;
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
@@ -2685,14 +2652,12 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 		cCopySave_tcpFreeRwbufq(&VAR_cep);
 		cSemaphore_signal();
 
-    syslog(LOG_EMERG, "Debug: **3**");
 		return E_OBJ;
 	}
 	else {
 
 #ifndef TCP_CFG_RWBUF_CSAVE
 
-    syslog(LOG_EMERG, "Debug: **4**");
 		if (!IS_PTR_DEFINED(VAR_rbuf)) {
 #if 0
 #ifdef TCP_CFG_NON_BLOCKING
@@ -2718,7 +2683,6 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
 
-    syslog(LOG_EMERG, "Debug: **5**");
 				*error = E_OBJ;
 
 			return E_OBJ;
@@ -2726,7 +2690,6 @@ tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout)
 
 #endif	/* of #ifndef TCP_CFG_RWBUF_CSAVE */
 
-    syslog(LOG_EMERG, "Debug: **6**");
 		return E_OK;
 	}
 }
@@ -3459,13 +3422,13 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 
 	//debug---
 	switch (VAR_cep.fsm_state) {
-	  case TCP_FSM_SYN_RECVD:
-		syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is SYN_RECVD");
-		break;
+	   case TCP_FSM_SYN_RECVD:
+	       syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is SYN_RECVD");
+	       break;
 
-	  case TCP_FSM_ESTABLISHED:
-		syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is ESTABLISHED");
-		break;
+	   case TCP_FSM_ESTABLISHED:
+	       syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is ESTABLISHED");
+	       break;
 	}
 	//debug---
 
@@ -3514,7 +3477,6 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 		 */
 		len = 0;
 		if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
-syslog(LOG_EMERG,"Debug: error = %d [1]", error);
 			if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 				VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 			goto err_ret;
@@ -3525,7 +3487,6 @@ syslog(LOG_EMERG,"Debug: error = %d [1]", error);
 
 	if (IS_PTR_DEFINED(VAR_sbuf)) {
 		if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
-syslog(LOG_EMERG,"Debug: error = %d [2]", error);
 			if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 				VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 			goto err_ret;
@@ -3549,7 +3510,6 @@ syslog(LOG_EMERG,"Debug: error = %d [2]", error);
 		 */
 		len = 0;
 		if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
-syslog(LOG_EMERG,"Debug: error = %d [3]", error);
 			if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 				VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 			goto err_ret;
@@ -3559,7 +3519,6 @@ syslog(LOG_EMERG,"Debug: error = %d [3]", error);
 #else	/* of #if defined(TCP_CFG_SWBUF_CSAVE_ONLY) */
 
 	if ((error = cTCPOutput_output_outputp_alloc((void**)&output, align + offset, TMO_TCP_GET_NET_BUF)) != E_OK) {
-syslog(LOG_EMERG,"Debug: error = %d [4]", error);
 		if (VAR_cep.timer[TCP_TIM_REXMT] == 0)
 			VAR_cep.timer[TCP_TIM_REXMT] = VAR_cep.rxtcur;
 		goto err_ret;
@@ -3580,8 +3539,7 @@ syslog(LOG_EMERG,"Debug: error = %d [4]", error);
 	tcph->sum	= tcph->flags = 0;
 
 	/* ネットワークバッファ長を調整する。*/
-	output->len = (uint16_t)(offset + TCP_HDR_SIZE + optlen + len - output->off.ifalign);
-	size = output->len + sizeof(T_NET_BUF) - 4;
+    output->len = (uint16_t)(offset + TCP_HDR_SIZE + optlen + len - output->off.ifalign);   /* output->len の長さが足りないので怪しい */Dsize = output->len + sizeof(T_NET_BUF) - 4;
 
 	/*
 	 *  TCP オプションの設定を行う。
@@ -3766,11 +3724,9 @@ syslog(LOG_EMERG,"Debug: error = %d [4]", error);
 
 #endif	/* of #ifdef TCP_CFG_TRACE */
 
-syslog(LOG_EMERG,"Debug: cTCPOutput");
 	/* ネットワーク層 (IP) の出力関数を呼び出す。*/
 	if ((error = cTCPOutput_output(output, size, cGetAddress_getDstAddress(), cGetAddress_getMyAddress(), ATTR_ipLength)) != E_OK)
 		goto err_ret;
-syslog(LOG_EMERG,"Debug: error = %d [5]", error);
 
 	/*
 	 *  相手に伝えたウィンドウサイズ (win) が 0 以上で、
@@ -3802,7 +3758,9 @@ err_ret:
 	 * ・送受信ウィンドバッファの省コピー機能
 	 * ・動的な通信端点の生成・削除機能
 	 */
-	VAR_flags &= TCP_CEP_FLG_NOT_CLEAR;
+	// VAR_flags &= TCP_CEP_FLG_NOT_CLEAR;
+    VAR_flags &= (TCP_CEP_FLG_WBCS_NBUF_REQ | TCP_CEP_FLG_WBCS_MASK |
+                  TCP_CEP_FLG_DYNAMIC       | TCP_CEP_FLG_VALID);
 
 	return error;
 }
@@ -4039,7 +3997,7 @@ tecs_listening (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, T_TCP_SEQ iss)
 	else
 		VAR_cep.iss = tcp_iss;
 
-	tcp_iss += TCP_ISS_INCR() / 4;
+	// tcp_iss += TCP_ISS_INCR() / 4;
 	cTCPFunctions_setTcpIss(tcp_iss + TCP_ISS_INCR() / 4);
 
 	/* 相手のシーケンス番号の初期値を記録する。*/
