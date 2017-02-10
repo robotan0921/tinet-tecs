@@ -351,9 +351,6 @@ skip_ipsec:
 	gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
 
 	if ((is_cEthernetOutput_joined()) && (output->off.protocolflag & FLAG_USE_ETHER)) {
-syslog(LOG_EMERG,"Debug: cEthernetOutput_ethernetOutput");
-syslog(LOG_EMERG,"Debug: dstaddr(ip4h->dst) [IP] = %x", ntohl(ip4h->dst));
-syslog(LOG_EMERG,"Debug: dstaddr(gw) [IP] = %x", gw);
 		if ((ercd = cEthernetOutput_ethernetOutput(output, size, gw, tmout)) != E_OK)
 			return ercd;
 		return ercd;

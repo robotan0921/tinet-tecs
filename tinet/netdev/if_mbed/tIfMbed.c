@@ -338,8 +338,8 @@ eNicDriver_start(CELLIDX idx, int8_t* outputp, int32_t size, uint8_t align)
 		len = ethernet_write((char *)output->buf + IF_ETHER_NIC_HDR_ALIGN + pos, res);
 	}
 
-syslog(LOG_EMERG, "Debug: ethernet_send");
     ethernet_send();
+syslog(LOG_EMERG, "Debug: ethernet_send");
 syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
 syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
 for (int i =0; i<output->len; i+=4 )
@@ -543,25 +543,31 @@ if_mbed_watchdog (T_IF_SOFTC *ic) {
  */
 void	// TODO: Componentize (TECS)
 if_mbed_eth_handler (void) {
-    uint32_t stat_edmac;
-    uint32_t stat_etherc;
-
-    /* Clear the interrupt request flag */
-    stat_edmac = (ETHER.EESR0 & ETHER.EESIPR0);       /* Targets are restricted to allowed interrupts */
-    ETHER.EESR0 = stat_edmac;
-    /* Reception-related */
-    if (stat_edmac & EDMAC_EESIPR_INI_RECV) {
-		// isig_sem(if_softc.semid_rxb_ready);
-		isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
-    }
-	if (stat_edmac & EDMAC_EESIPR_INI_TRANS) {
-		// isig_sem(if_softc.semid_txb_ready);
-		isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
+	if ((ETHER.EESR0 & ETHER_EESR0_TC) != 0) {
+		/* 送信割り込み処理 */
+		isig_sem(SEMID_tSemaphore_SemaphoreNicSend);
 	}
-    /* E-MAC-related */
-    if (stat_edmac & EDMAC_EESIPR_INI_EtherC) {
-        /* Clear the interrupt request flag */
-        stat_etherc = (ETHER.ECSR0 & ETHER.ECSIPR0);  /* Targets are restricted to allowed interrupts */
-        ETHER.ECSR0  = stat_etherc;
-    }
+
+	INT_Ether();
+ //    uint32_t stat_edmac;
+ //    uint32_t stat_etherc;
+
+ //    /* Clear the interrupt request flag */
+ //    stat_edmac = (ETHER.EESR0 & ETHER.EESIPR0);       /* Targets are restricted to allowed interrupts */
+ //    ETHER.EESR0 = stat_edmac;
+ //    /* Reception-related */
+ //    if (stat_edmac & EDMAC_EESIPR_INI_RECV) {
+	// 	// isig_sem(if_softc.semid_rxb_ready);
+	// 	isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
+ //    }
+	// if (stat_edmac & EDMAC_EESIPR_INI_TRANS) {
+	// 	// isig_sem(if_softc.semid_txb_ready);
+	// 	isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
+	// }
+ //    /* E-MAC-related */
+ //    if (stat_edmac & EDMAC_EESIPR_INI_EtherC) {
+ //        /* Clear the interrupt request flag */
+ //        stat_etherc = (ETHER.ECSR0 & ETHER.ECSIPR0);  /* Targets are restricted to allowed interrupts */
+ //        ETHER.ECSR0  = stat_etherc;
+ //    }
 }

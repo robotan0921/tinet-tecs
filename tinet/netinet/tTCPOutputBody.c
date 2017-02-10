@@ -209,7 +209,6 @@ eTCPOutput_output(CELLIDX idx, int8_t* outputp, int32_t size, const int8_t* dsta
 		T_IN4_ADDR dst = *((T_IN4_ADDR*)dstaddr);
 		T_IN4_ADDR src = *((T_IN4_ADDR*)srcaddr);
 
-syslog(LOG_EMERG,"Debug: dstaddr [TCP] = %x", dst);
 		cIPv4Output_setHeader(output, size, dst, src);
 
 		T_TCP_HDR *tcph = GET_TCP_HDR(output, output->off.ifhdrlen + output->off.iphdrlenall);
@@ -362,6 +361,7 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 
 		/* ネットワークバッファ長を調整する。*/
 		output->len = (uint16_t)GET_IF_IP_TCP_HDR_SIZE(output, hdr_offset);
+		// output->len = output->off.ifhdrlen - output->off.ifalign + GET_IP4_HDR_SIZE(output) + GET_TCP_HDR_SIZE2(output, output->off.ifhdrlen + output->off.iphdrlen);
 
 #ifdef TCP_CFG_TRACE
 

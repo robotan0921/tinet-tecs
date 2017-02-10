@@ -170,7 +170,6 @@ eArpInput_arpInput(CELLIDX idx, int8_t* inputp, int32_t size, const uint8_t* mac
 buf_rel:
 	NET_COUNT_ARP(net_count_arp.in_err_packets, 1);
 	eArpInput_arpInput_inputp_dealloc((void *)inputp);
-
 }
 
 /* #[<ENTRY_PORT>]# eArpOutput
@@ -249,9 +248,6 @@ eArpOutput_arpResolve(CELLIDX idx, int8_t* outputp, int32_t size, T_IN4_ADDR dst
 		cArpSemaphore_signal();
 
 		/* アドレス解決要求を送信する。*/
-T_IN4_ADDR tempaddr = (T_IN4_ADDR)(((uint32_t)(192)<<24)|((uint32_t)(168)<<16)|((uint32_t)(1)<<8)|(56)); //MAKE_IPV4_ADDR(192.168.1.56);
-syslog(LOG_EMERG, "Debug: tempaddr = %x", tempaddr);
-syslog(LOG_EMERG, "Debug: dstaddr = %x", dstaddr);
 		return tecs_arp_request(p_cellcb, macaddress, dstaddr);
 	}
 }
