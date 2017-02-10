@@ -132,8 +132,8 @@ eCheckSum_ipv4CheckSum(int8_t* data, int32_t size, uint32_t offset, uint8_t prot
 	//TODO: オフセットの情報を引数に加える
 	//iphdr = GET_IP4_HDR(input, input->off.ifhdrlen);
 	iphdr = GET_IP4_HDR(input);
-	//TODO: uint32_t len = input->len - offset + input->off.ifalign;
-	uint32_t len = input->len - offset;
+	uint32_t len = input->len - offset + input->off.ifalign;
+	// uint32_t len = input->len - offset;
 
 	/* 4 オクテット境界のデータ長 */
 	align = (len + 3) >> 2 << 2;
