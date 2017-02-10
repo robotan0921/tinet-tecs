@@ -339,11 +339,6 @@ eNicDriver_start(CELLIDX idx, int8_t* outputp, int32_t size, uint8_t align)
 	}
 
     ethernet_send();
-syslog(LOG_EMERG, "Debug: ethernet_send");
-syslog(LOG_EMERG, "Debug: output->len = %d", output->len);
-syslog(LOG_EMERG, "Debug: output->flags = 0x%x", output->flags);
-for (int i =0; i<output->len; i+=4 )
-	syslog(LOG_EMERG, "Debug: output->buf = %02x %02x %02x %02x", output->buf[i], output->buf[i+1], output->buf[i+2], output->buf[i+3]);
 }
 
 /* #[<ENTRY_FUNC>]# eNicDriver_read
