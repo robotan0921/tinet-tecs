@@ -263,16 +263,16 @@ eICMP4Error_error(CELLIDX idx, int8_t* inputp, int32_t size, uint8_t code)
 		/* エラー処理コードをここに記述します */
 	} /* end if VALID_IDX(idx) */
 
-#if 0 //TODO
-
 	/* ここに処理本体を記述します #_TEFB_# */
-	T_IP4_HDR	*ip4h;
+	T_IP4_HDR	*ip4h, *sip4h;
 	T_ICMP4_HDR	*icmp4h;
 	T_NET_BUF	*output;
+	T_NET_BUF 	*input = (T_NET_BUF*)inputp;
 	T_IN4_ADDR	saddr;
-	uint_t		len, ip4hl, align;
+	uint_t		len, ip4hl, align, slen;
 
 	ip4h  = GET_IP4_HDR(input);
+	//TODO: ip4h  = GET_IP4_HDR(input, input->off.ifhdrlen);
 	ip4hl = GET_IP4_HDR_SIZE(input);
 
 	/* 送信用の IP データグラムを獲得する。*/
@@ -281,33 +281,65 @@ eICMP4Error_error(CELLIDX idx, int8_t* inputp, int32_t size, uint8_t code)
 	else
 		len = 8;
 
-	saddr = ntohl(ip4h->src);
-	if (in4_get_datagram(&output, (uint_t)(ICMP4_HDR_SIZE + ip4hl + len), 0,
-	                     &saddr, NULL, IPPROTO_ICMP, IP4_DEFTTL,
-	                     NBA_SEARCH_ASCENT, TMO_ICMP_OUTPUT) != E_OK)
+	/* 4 オクテット境界のデータ長 */
+	align = (len + ICMP4_HDR_SIZE + ip4hl + 3) >> 2 << 2;
+	// align = (len + 3) >> 2 << 2;
+
+	slen = align + input->off.ifhdrlen + IP4_HDR_SIZE;
+
+	// saddr = ntohl(ip4h->src);
+	// if (in4_get_datagram(&output, (uint_t)(ICMP4_HDR_SIZE + ip4hl + len), 0,
+	//                      &saddr, NULL, IPPROTO_ICMP, IP4_DEFTTL,
+	//                      NBA_SEARCH_ASCENT, TMO_ICMP_OUTPUT) != E_OK)
+	// 	return;
+	if(cIPv4Reply_IPv4Reply_outputp_alloc((void**)&output,slen,TMO_ICMP_OUTPUT) != E_OK)
 		return;
 
+	/* オフセット情報hをコピーする */
+	output->off = input->off;
+	output->off.iphdrlenall = IP4_HDR_SIZE;
+
+	sip4h = output->buf + output->off.ifhdrlen;
+
+	/* IP ヘッダを設定する --------------------- */
+	sip4h->vhl	= IP4_MAKE_VHL(IPV4_VERSION, IP4_HDR_SIZE >> 2);
+	sip4h->len	= htons(slen);
+	sip4h->proto	= IPPROTO_ICMP;
+	sip4h->ttl	= IP4_DEFTTL;
+	sip4h->type	= 0;
+	sip4h->id	= ip4h->flg_off = ip4h->sum = 0;
+
+	/* IP アドレスを設定する。*/
+	sip4h->dst	= ip4h->src;
+	sip4h->src = htonl(cIPv4Functions_getIPv4Address());
+	/* IPheader ここまで--------------------- */
+
 	/* ICMP ヘッダを設定する。*/
-	icmp4h		= GET_ICMP4_HDR(output, IF_IP4_ICMP4_HDR_OFFSET);
+	icmp4h		= GET_ICMP4_HDR(output, output->off.ifhdrlen+IP4_HDR_SIZE);
+	// icmp4h		= GET_ICMP4_HDR(output, IF_IP4_ICMP4_HDR_OFFSET);
 	icmp4h->type	= ICMP4_UNREACH;
 	icmp4h->code	= code;
 	icmp4h->data.addr= 0;
 
 	/* エラーが発生した IP ヘッダと データ 8 オクテットをコピーする。*/
-	memcpy(GET_ICMP4_SDU(output, IF_IP4_ICMP4_HDR_OFFSET),
-	       GET_IP4_HDR(input), (size_t)(ip4hl + len));
+	// memcpy(GET_ICMP4_SDU(output, IF_IP4_ICMP4_HDR_OFFSET),
+	//        GET_IP4_HDR(input), (size_t)(ip4hl + len));
+	memcpy(GET_ICMP4_SDU(output, output->off.ifhdrlen+IP4_HDR_SIZE),
+	       ip4h, (size_t)(ip4hl + len));
 
-	/* 4 オクテット境界のデータ長 */
-	align = (len + 3) >> 2 << 2;
+
 
 	/* 4 オクテット境界までパディングで埋める。*/
 	if (align > len)
-		memset((uint8_t*)GET_ICMP4_SDU(output, IF_IP4_ICMP4_HDR_OFFSET) + ip4hl + len,
+		// memset((uint8_t*)GET_ICMP4_SDU(output, IF_IP4_ICMP4_HDR_OFFSET) + ip4hl + len,
+		//        0, (size_t)(align - len));
+		memset((uint8_t*)GET_ICMP4_SDU(output, output->off.ifhdrlen + IP4_HDR_SIZE) + ip4hl + len,
 		       0, (size_t)(align - len));
 
 	/* チェックサムを計算する。*/
 	icmp4h->sum = 0;
-	icmp4h->sum = in_cksum(icmp4h, (uint_t)(ICMP4_HDR_SIZE + ip4hl + align));
+	// icmp4h->sum = in_cksum(icmp4h, (uint_t)(ICMP4_HDR_SIZE + ip4hl + align));
+	icmp4h->sum = cIPv4Functions_checkSum(icmp4h, (uint_t)(ICMP4_HDR_SIZE + ip4hl + align));
 
 	/* 送信する。*/
 	NET_COUNT_ICMP4(net_count_icmp4.out_octets,
@@ -315,8 +347,11 @@ eICMP4Error_error(CELLIDX idx, int8_t* inputp, int32_t size, uint8_t code)
 	NET_COUNT_ICMP4(net_count_icmp4.out_packets, 1);
 	NET_COUNT_MIB(icmp_stats.icmpOutMsgs, 1);
 	NET_COUNT_MIB(icmp_stats.icmpOutDestUnreachs, 1);
-	ip_output(output, TMO_ICMP_OUTPUT);
-#endif
+	// ip_output(output, TMO_ICMP_OUTPUT);
+	cIPv4Reply_IPv4Reply((int8_t*)output, output->len+output->off.ifalign + sizeof(T_NET_BUF) - 4, TMO_ICMP_OUTPUT);
+
+	/* メモリを解放 */
+	eICMP4Error_error_inputp_dealloc((void*)inputp);
 }
 
 /* #[<POSTAMBLE>]#
@@ -358,8 +393,15 @@ icmp_echo (CELLCB *p_cellcb, T_NET_BUF *input, int32_t size)
 		 *  送信元アドレスは自 IPv4 アドレス。
 		 */
 		ip4h      = GET_IP4_HDR(input);
-		ip4h->dst = ip4h->src;
-		ip4h->src = htonl(ifp->in4_ifaddr.addr);
+		//TODO: ip4h      = GET_IP4_HDR(input,input->off.ifhdrlen);
+		srcaddr   = ip4h->src;
+		ip4h->src = ip4h->dst;
+		dstaddr   = ntohl(ip4h->dst);
+		ip4h->dst = srcaddr;
+		srcaddr   = ntohl(srcaddr);
+
+		// ip4h->dst = ip4h->src;
+		// ip4h->src = htonl(ifp->in4_ifaddr.addr);
 
 		/* チェックサムを計算する。*/
 		icmp4h->sum = 0;
