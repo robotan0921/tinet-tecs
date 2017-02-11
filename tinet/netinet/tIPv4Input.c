@@ -317,7 +317,6 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 	case IPPROTO_TCP:
 		if (is_cTCPInput_joined()) {
 			NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
-			syslog(LOG_EMERG,"*********TCP INPUT ENTRY ********* ");
 			cTCPInput_TCPInput(inputp, size, (int8_t*)&dst, (int8_t*)&src, 4);
 			return;
 		}

@@ -753,7 +753,7 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 	/* CEP の状態により処理を行う。*/
 
 	if (VAR_cep.fsm_state == TCP_FSM_LISTEN) {		/* 受動オープン (LISTEN) の処理。*/
-		syslog(LOG_EMERG, "input when cep is LISTEN ");
+		// syslog(LOG_EMERG, "Debug: input when cep is LISTEN ");
 		if ((ret = tecs_listening(p_cellcb, input, offset, iss)) == RET_RST_DROP)
 			goto reset_drop;
 		else if (ret == RET_DROP)
@@ -789,7 +789,7 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 	}
 	else {
 		if (VAR_cep.fsm_state == TCP_FSM_SYN_RECVD) {	/* SYN を受信、SYN 送信済み	*/
-			syslog(LOG_EMERG, "input when cep is SYN_RECVD ");
+			// syslog(LOG_EMERG, "Debug: input when cep is SYN_RECVD ");
 			/*
 			 *  相手から受信確認が送られて来ても、
 			 *
@@ -3420,17 +3420,17 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 
 	offset = VAR_offset.ifhdrlen + VAR_offset.iphdrlen;
 
-	//debug---
-	switch (VAR_cep.fsm_state) {
-	   case TCP_FSM_SYN_RECVD:
-	       syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is SYN_RECVD");
-	       break;
+	//Debug:
+	// switch (VAR_cep.fsm_state) {
+	//    case TCP_FSM_SYN_RECVD:
+	//        syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is SYN_RECVD");
+	//        break;
 
-	   case TCP_FSM_ESTABLISHED:
-	       syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is ESTABLISHED");
-	       break;
-	}
-	//debug---
+	//    case TCP_FSM_ESTABLISHED:
+	//        syslog(LOG_EMERG,"TCP CEP OUTPUT now. CEP mode is ESTABLISHED");
+	//        break;
+	// }
+	//Debug:
 
 	/*
 	 *  セグメント長を、相手の最大受信セグメント長に調整する。

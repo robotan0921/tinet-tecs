@@ -155,10 +155,6 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	input->off.tphdrlen = TCP_HDR_SIZE;
 	offset = input->off.ifhdrlen + input->off.iphdrlenall;
 
-	syslog(LOG_EMERG, "packet length = %d", input->len);
-	syslog(LOG_EMERG, "ifhdrlen = %d", input->off.ifhdrlen);
-	syslog(LOG_EMERG, "iphdrlenall = %d", input->off.iphdrlenall);
-
 	/* ヘッダ長をチェックする。*/
 	if (input->len < IF_IP_TCP_HDR_SIZE(input)) {
 		NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_BAD_HEADERS], 1);
@@ -206,11 +202,11 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	/* TCPCEPのファインド */
 	for (ix = 0; ix < N_CP_cCEPInput; ix++) {
 		if (cCEPInput_check(ix, dstaddr, srcaddr, addrlen, tcph->dport, tcph->sport) == E_OK) {
-			syslog(LOG_EMERG, "CEP FIND! seq :%d  ack:%d .", tcph->seq, tcph->ack);
-			syslog(LOG_EMERG, "Debug: sport :%d  dport:%d .", tcph->sport, tcph->dport);
-			syslog(LOG_EMERG, "Debug: flags :0x%x  doff :0x%x .", tcph->flags, tcph->doff);
+			// syslog(LOG_EMERG, "Debug: CEP FIND! seq :%d  ack:%d .", tcph->seq, tcph->ack);
+			// syslog(LOG_EMERG, "Debug: sport :%d  dport:%d .", tcph->sport, tcph->dport);
+			// syslog(LOG_EMERG, "Debug: flags :0x%x  doff :0x%x .", tcph->flags, tcph->doff);
 			error = cCEPInput_input(ix, inputp, size);
-			syslog(LOG_EMERG, "********success!*********");
+			// syslog(LOG_EMERG, "Debug: ********success!*********");
 			return error;
 		}
 	}
