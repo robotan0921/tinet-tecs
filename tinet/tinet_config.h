@@ -46,7 +46,9 @@
 
 /* TCPのノンブロッキングコール機能を組込む。*/
 
+#if 0
 #define TCP_CFG_NON_BLOCKING
+#endif 	/* of #if 0 */
 
 /* UDPのノンブロッキングコール機能を組込む。*/
 
