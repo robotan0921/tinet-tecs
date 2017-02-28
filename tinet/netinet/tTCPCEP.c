@@ -319,6 +319,8 @@ static ER 		 tecs_tcp_lock_cep (CELLCB *p_cellcb, FN tfn);
 static T_TCP_CEP *tecs_tcp_close (CELLCB *p_cellcb);
 static void 	 tecs_tcp_free_reassq (CELLCB *p_cellcb);
 static T_TCP_CEP *tecs_tcp_drop (CELLCB *p_cellcb, ER errno);
+static ER        tecs_tcp_can_snd (CELLCB *p_cellcb, FN fncd);
+static ER        tecs_tcp_can_rcv (CELLCB *p_cellcb, FN fncd);
 static ER 		 tecs_tcp_can_send_more (CELLCB *p_cellcb, FN fncd, TMO tmout);
 static ER 		 tecs_tcp_can_recv_more (ER *error, CELLCB *p_cellcb, FN fncd, TMO tmout);
 static void 	 tecs_tcp_set_persist_timer (CELLCB *p_cellcb);
@@ -1566,6 +1568,7 @@ eAPI_send(CELLIDX idx, const int8_t* data, int32_t len, TMO tmout)
 err_ret:
 	VAR_cep.snd_tskid = TA_NULL;
 	sTask_cCallingSendTask_unbind();
+    //TODO: cREP4_unjoin();
 	VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
 	return error;
 }
@@ -1671,6 +1674,7 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 
 err_ret:
 	VAR_cep.rcv_tskid = TA_NULL;
+    //TODO: cREP4_unjoin();
 	sTask_cCallingReceiveTask_unbind();
 	VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
 	return error;
@@ -1694,8 +1698,55 @@ eAPI_cancel(CELLIDX idx, FN fncd)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+    T_TCP_CEP   *cep;
+    ER  error = E_OK;
+    ER  snd_err, rcv_err;
 
-	return(ercd);
+    /* API 機能コードをチェックする。*/
+    if (!VALID_TFN_TCP_CAN(fncd))
+        return E_PAR;
+
+    /* TCP 通信端点を得る。*/
+    cep = &VAR_cep;
+
+    /* TCP 通信端点をチェックする。*/
+    //TODO: if (!VALID_TCP_CEP(cep))
+    //     return E_NOEXS;
+
+    if (fncd == TFN_TCP_ALL) {      /* TFN_TCP_ALL の処理 */
+        snd_err = tecs_tcp_can_snd(p_cellcb, fncd);
+        rcv_err = tecs_tcp_can_rcv(p_cellcb, fncd);
+
+        /*
+         *  snd_err と rcv_err のどちらも EV_NOPND
+         *  なら、ペンディングしていないのでエラー
+         */
+        if (snd_err == EV_NOPND && rcv_err == EV_NOPND)
+            error = E_OBJ;
+        else {
+            if (snd_err == EV_NOPND)
+                snd_err = E_OK;
+            if (rcv_err == EV_NOPND)
+                rcv_err = E_OK;
+
+            if (snd_err != E_OK)
+                error = snd_err;
+            else if (rcv_err != E_OK)
+                error = rcv_err;
+        }
+    }
+
+    else if (IS_TFN_TCP_RCV(fncd)) {    /* 受信処理のキャンセル */
+        if ((error = tecs_tcp_can_rcv(p_cellcb, fncd)) == EV_NOPND)
+            error = E_OBJ;
+    }
+
+    else {                  /* 送信処理のキャンセル */
+        if ((error = tecs_tcp_can_snd(p_cellcb, fncd)) == EV_NOPND)
+            error = E_OBJ;
+    }
+
+    return error;
 }
 
 /* #[<ENTRY_FUNC>]# eAPI_close
@@ -2522,6 +2573,220 @@ tecs_tcp_free_reassq (CELLCB *p_cellcb)
 static T_TCP_CEP *
 tecs_tcp_drop (CELLCB *p_cellcb, ER errno)
 {}
+
+/*
+ *  tecs_tcp_can_snd -- ペンディングしている送信のキャンセル
+ */
+
+static ER
+tecs_tcp_can_snd (CELLCB *p_cellcb, FN fncd)
+{
+    ER  error = E_OK;
+    T_TCP_CEP *cep = &VAR_cep;
+
+    /* 通信端点をロックする。*/
+    cSemaphore_wait();
+
+    /*
+     *  snd_tskid が TA_NULL なら、
+     *  ペンディングしていないのでエラー
+     */
+    if (VAR_cep.snd_tskid == TA_NULL)
+        error = EV_NOPND;
+
+    /* ペンディング中の API 機能コードと一致しなければエラー */
+    else if (fncd != TFN_TCP_ALL && fncd != VAR_cep.snd_tfn)
+        error = E_OBJ;
+
+    /* 処理をキャンセルする。*/
+    else {
+
+        /* 受信再構成キューのネットワークバッファを解放する。*/
+        tecs_tcp_free_reassq(p_cellcb);
+
+        /* 受信ウィンドバッファキューのネットワークバッファを解放する。*/
+        cep->rwbuf_count = 0;
+        // TCP_FREE_RWBUFQ(cep);
+        cCopySave_tcpFreeRwbufq(cep);
+
+        /* 送信ウィンドバッファキューのネットワークバッファを解放する。*/
+        // TCP_FREE_SWBUFQ(cep);
+        cCopySave_tcpFreeSwbufq(cep);
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+        if (cep->snd_nblk_tfn != TFN_TCP_UNDEF) {   /* ノンブロッキングコール */
+
+            switch (cep->snd_nblk_tfn) {
+
+            case TFN_TCP_CON_CEP:
+                /*
+                 *  通信端点から受付口を解放し、
+                 *  イベントフラグをクローズに設定する。
+                 */
+                cep->rep = NULL;
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+                cep->rep4 = NULL;
+#endif
+
+                cep->fsm_state = TCP_FSM_CLOSED;
+                syscall(set_flg(cep->est_flgid, TCP_CEP_EVT_CLOSED));
+                break;
+
+            case TFN_TCP_SND_DAT:
+            case TFN_TCP_GET_BUF:
+            case TFN_TCP_SND_OOB:
+                break;
+            }
+
+            if (IS_PTR_DEFINED(cep->callback)) {
+
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+
+                (*cep->callback)(GET_TCP_CEPID(cep), cep->snd_nblk_tfn, (void*)E_RLWAI);
+
+#else   /* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+                ER  error = E_RLWAI;
+
+                (*cep->callback)(GET_TCP_CEPID(cep), cep->snd_nblk_tfn, (void*)&error);
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+            }
+            else
+                error = E_OBJ;
+            cep->snd_nblk_tfn = TFN_TCP_UNDEF;
+            }
+        else
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+            // error = rel_wai(cep->snd_tskid);
+            error = cCallingSendTask_releaseWait();
+
+        VAR_cep.snd_tskid = TA_NULL;
+        sTask_cCallingSendTask_unbind();
+        //TODO: cREP4_unjoin();
+        VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
+    }
+
+    /* 通信端点のロックを解除する。*/
+    cSemaphore_signal();
+
+    return error;
+}
+
+/*
+ *  tecs_tcp_can_rcv -- ペンディングしている受信のキャンセル
+ */
+
+static ER
+tecs_tcp_can_rcv (CELLCB *p_cellcb, FN fncd)
+{
+    ER  error = E_OK;
+    T_TCP_CEP *cep = &VAR_cep;
+
+    /* 通信端点をロックする。*/
+    cSemaphore_wait();
+
+    /*
+     *  rcv_tskid が TA_NULL なら、
+     *  ペンディングしていないのでエラー
+     */
+    if (VAR_cep.rcv_tskid == TA_NULL)
+        error = EV_NOPND;
+
+    /* ペンディング中の API 機能コードと一致しなければエラー */
+    else if (fncd != TFN_TCP_ALL && fncd != VAR_cep.rcv_tfn)
+        error = E_OBJ;
+
+    /* 処理をキャンセルする。*/
+    else {
+
+        /* 受信再構成キューのネットワークバッファを解放する。*/
+        tcp_free_reassq(p_cellcb);
+
+        /* 受信ウィンドバッファキューのネットワークバッファを解放する。*/
+        VAR_cep.rwbuf_count = 0;
+        // TCP_FREE_RWBUFQ(cep);
+        cCopySave_tcpFreeRwbufq(cep);
+
+        /* 送信ウィンドバッファキューのネットワークバッファを解放する。*/
+        // TCP_FREE_SWBUFQ(cep);
+        cCopySave_tcpFreeSwbufq(cep);
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+        if (cep->rcv_nblk_tfn != TFN_TCP_UNDEF) {   /* ノンブロッキングコール */
+
+            switch (cep->rcv_nblk_tfn) {
+
+            case TFN_TCP_ACP_CEP:
+                /*
+                 *  通信端点から受付口を解放し、
+                 *  イベントフラグをクローズに設定する。
+                 */
+                cep->rep = NULL;
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+                cep->rep4 = NULL;
+#endif
+
+                cep->fsm_state = TCP_FSM_CLOSED;
+                syscall(set_flg(cep->est_flgid, TCP_CEP_EVT_CLOSED));
+                break;
+
+            case TFN_TCP_RCV_DAT:
+            case TFN_TCP_RCV_BUF:
+                break;
+
+            case TFN_TCP_CLS_CEP:
+                cep->fsm_state = TCP_FSM_CLOSED;
+                tcp_respond(NULL, cep, cep->rcv_nxt, cep->snd_una - 1,
+                            cep->rbufsz - cep->rwbuf_count, TCP_FLG_RST);
+                syscall(set_flg(cep->est_flgid, TCP_CEP_EVT_CLOSED));
+                break;
+            }
+
+            if (IS_PTR_DEFINED(cep->callback)) {
+
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+
+                (*cep->callback)(GET_TCP_CEPID(cep), cep->rcv_nblk_tfn, (void*)E_RLWAI);
+
+#else   /* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+                ER  error = E_RLWAI;
+
+                (*cep->callback)(GET_TCP_CEPID(cep), cep->rcv_nblk_tfn, (void*)&error);
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+            }
+            else
+                error = E_OBJ;
+            cep->rcv_nblk_tfn = TFN_TCP_UNDEF;
+        }
+        else
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+            // error = rel_wai(cep->rcv_tskid);
+            error = cCallingReceiveTask_releaseWait();
+
+        cep->rcv_tskid = TA_NULL;
+        sTask_cCallingReceiveTask_unbind();
+        //TODO: cREP4_unjoin();
+        cep->rcv_tfn   = TFN_TCP_UNDEF;
+    }
+
+    /* 通信端点のロックを解除する。*/
+    cSemaphore_signal();
+
+    return error;
+}
 
 /*
  *  tecs_tcp_can_send_more -- 送信できるか、通信端点の状態を見る。
@@ -4449,7 +4714,7 @@ tecs_proc_ack1 (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, bool_t *needou
 			VAR_cep.fsm_state  = TCP_FSM_ESTABLISHED;
 
 			/* TCP 通信端点からTCP 受付口を解放する。*/
-			sREP4_cREP4_unbind();
+			//TODO: sREP4_cREP4_unbind();
 			// cep->rep = NULL;
 
 #if defined(_IP6_CFG) && defined(_IP4_CFG)
