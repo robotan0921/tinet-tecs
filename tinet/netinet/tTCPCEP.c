@@ -1767,8 +1767,154 @@ eAPI_close(CELLIDX idx, TMO tmout)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+    T_TCP_CEP   *cep;
+    ER      error = E_OK;
+    FLGPTN      flag;
 
-	return(ercd);
+#ifndef TCP_CFG_NON_BLOCKING
+
+    /* tmout が TMO_NBLK ならエラー */
+    if (tmout == TMO_NBLK)
+        return E_PAR;
+
+#endif  /* of #ifndef TCP_CFG_NON_BLOCKING */
+
+    /*
+     *  CEP をロックし、API 機能コードとタスク識別子を記録する。
+     *  すでに記録されていれば、ペンディング中なのでエラー
+     */
+    if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_CLS_CEP)) != E_OK)
+        return error;
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+    /* タイムアウトをチェックする。*/
+    if (tmout == TMO_NBLK) {                /* ノンブロッキングコール */
+
+        if (!IS_PTR_DEFINED(cep->callback))
+            error = E_OBJ;
+        else if (cep->fsm_state == TCP_FSM_CLOSED) {    /* すでにクローズされているとき */
+
+#ifdef TCP_CFG_NON_BLOCKING_COMPAT14
+
+            (*cep->callback)(GET_TCP_CEPID(cep), TFN_TCP_CLS_CEP, E_OK);
+            error = E_WBLK;
+
+#else   /* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+            ER  error = E_OK;
+
+            (*cep->callback)(GET_TCP_CEPID(cep), TFN_TCP_CLS_CEP, (void*)&error);
+            error = E_WBLK;
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING_COMPAT14 */
+
+        }
+        else {
+            /* NBLK のAPI 機能コードを設定する。*/
+            cep->rcv_nblk_tfn = TFN_TCP_CLS_CEP;
+
+            if ((cep = tcp_user_closed(cep)) != NULL) { /* コネクションを切断する。*/
+                /* 切断セグメント出力をポストする。*/
+                cep->flags |= TCP_CEP_FLG_POST_OUTPUT;
+                sig_sem(SEM_TCP_POST_OUTPUT);
+                }
+
+            /*  cep が NULL で戻ってきた場合は、
+             *  既にコネクションが切断されていることを意味している。
+             *  また、この場合コールバック関数が呼び出されている。
+             */
+            return E_WBLK;
+            }
+        }
+    else {                          /* 非ノンブロッキングコール */
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+        if ((cep = tecs_tcp_user_closed(p_cellcb)) == NULL) { /* コネクションを切断する。*/
+
+            /*  cep が NULL で戻ってきた場合は、
+             *  既にコネクションが切断されていることを意味している。
+             */
+            return error;
+        }
+        else {
+            /* 切断セグメント出力をポストする。*/
+            VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
+            cSemaphoreTcppost_signal();
+
+            /* イベントフラグが CLOSED になるまで待つ。*/
+            error = cEstFlag_waitTimeout(TCP_CEP_EVT_CLOSED, TWF_ORW, &flag, tmout);
+            if (error == E_OK && VAR_cep.error != E_OK)
+                error = VAR_cep.error;
+
+            if (error != E_OK) {
+                if (error == E_RLWAI) {
+                    /* tcp_cls_cep がキャンセルされたときは、RST を送信する。*/
+                    // tcp_respond(NULL, cep, cep->rcv_nxt, cep->snd_una - 1,
+                    //             cep->rbufsz - cep->rwbuf_count, TCP_FLG_RST);
+                    cTCPOutput_allocAndRespond(cGetAddress_getDstAddress(),
+                                               cGetAddress_getMyAddress(),
+                                               ATTR_ipLength,
+                                               VAR_dstport,
+                                               VAR_myport,
+                                               VAR_cep.rcv_nxt,
+                                               VAR_cep.snd_una - 1,
+                                               VAR_rbufSize - VAR_cep.rwbuf_count,
+                                               TCP_FLG_RST,
+                                               VAR_offset);
+
+                }
+
+                /* タイマーを停止する。*/
+                //TODO: tecs_tcp_cancel_timers(cep);
+                for (int_t ix = NUM_TCP_TIMERS; ix -- > 0; )
+                    VAR_cep.timer[ix] = 0;
+
+                /*
+                 *  通信端点をロックし、
+                 *  受信再構成キューのネットワークバッファを解放する。
+                 */
+                cSemaphore_wait();
+                tecs_tcp_free_reassq(p_cellcb);
+                cSemaphore_signal();
+
+                /* 状態を未使用にする。*/
+                VAR_cep.fsm_state = TCP_FSM_CLOSED;
+
+                /*
+                 * 以下に関係しないフラグをクリアーする。
+                 * ・送受信ウィンドバッファの省コピー機能
+                 * ・動的な通信端点の生成・削除機能
+                 */
+                //TODO: VAR_flags &= TCP_CEP_FLG_NOT_CLEAR;
+                VAR_flags &= (TCP_CEP_FLG_WBCS_NBUF_REQ | TCP_CEP_FLG_WBCS_MASK |
+                              TCP_CEP_FLG_DYNAMIC       | TCP_CEP_FLG_VALID);
+                /*
+                 *  通信端点をロックし、
+                 *  送受信ウィンドバッファキューのネットワークバッファを解放する。
+                 */
+                VAR_cep.rwbuf_count = 0;
+                cSemaphore_wait();
+                cCopySave_tcpFreeRwbufq(&VAR_cep);
+                cCopySave_tcpFreeSwbufq(&VAR_cep);
+                cSemaphore_signal();
+
+                cEstFlag_set(TCP_CEP_EVT_CLOSED);
+            }
+        }
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+    }
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+    VAR_cep.rcv_tskid = TA_NULL;
+    sTask_cCallingReceiveTask_unbind();
+    //TODO: cREP4_unjoin();
+    VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
+    return error;
 }
 
 /* #[<ENTRY_FUNC>]# eAPI_shutdown
