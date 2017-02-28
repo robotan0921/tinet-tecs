@@ -309,6 +309,8 @@ get_tTask_DES()
 
 static T_TCP_CEP *tecs_tcp_user_closed (CELLCB *p_cellcb);
 static void 	 tecs_tcp_output (CELLCB *p_cellcb);
+static void      tecs_tcp_alloc_auto_port (CELLCB *p_cellcb);
+static ER        tecs_tcp_alloc_port (CELLCB *p_cellcb, uint16_t portno);
 static T_TCP_CEP *tecs_tcp_timers (CELLCB *p_cellcb, int_t tix);
 static ER 		 tecs_tcp_wait_rwbuf (CELLCB *p_cellcb, TMO tmout);
 static uint8_t 	 tecs_tcp_move_ra2rw (CELLCB *p_cellcb, uint8_t flags);
@@ -358,6 +360,12 @@ const static uint8_t tcp_outflags[] = {
 	TCP_FLG_ACK,				/*  9, 終了、FIN 伝達確認受信、FIN待ち	*/
 	TCP_FLG_ACK,				/* 10, 終了、時間待ち					*/
 };
+
+/*
+ *  局所変数
+ */
+
+static uint16_t tcp_port_auto = TCP_PORT_FIRST_AUTO;    /* 自動割り当て番号 */
 
 /*
  *  バックオフ時間
@@ -1455,8 +1463,257 @@ eAPI_connect(CELLIDX idx, const int8_t* myaddr, uint16_t myport, const int8_t* d
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+    ER          error;
+    FLGPTN      flag;
+    T_IN4_ADDR  my4addr = 0, dst4addr = 0;
 
-	return(ercd);
+#if defined(SUPPORT_INET6) && defined(SUPPORT_INET4)
+
+    /*
+     * API (tcp6_acp_cep と tcp_acp_cep) と、
+     * TCP通信端点のプロトコルが矛盾していればエラー
+     */
+
+#if API_PROTO == API_PROTO_IPV6
+
+    if (GET_TCP_CEP(cepid)->flags & TCP_CEP_FLG_IPV4)
+        return E_ID;
+
+#endif  /* of #if API_PROTO == API_PROTO_IPV6 */
+
+#if API_PROTO == API_PROTO_IPV4
+
+    if ((GET_TCP_CEP(cepid)->flags & TCP_CEP_FLG_IPV4) == 0)
+        return E_ID;
+
+#endif  /* of #if API_PROTO == API_PROTO_IPV4 */
+
+#endif  /* of #if defined(SUPPORT_INET6) && defined(SUPPORT_INET4) */
+
+    /*
+     *  あて先がマルチキャストアドレスならエラー
+     */
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4)
+
+    if (IN4_IS_ADDR_MULTICAST(dstaddr))
+        return E_PAR;
+
+#else   /* of #if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4) */
+
+    if (IN_IS_ADDR_MULTICAST(dstaddr))
+        return E_PAR;
+
+#endif  /* of #if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4) */
+
+#if (API_PROTO == API_PROTO_IPV6) && !defined(API_CFG_IP4MAPPED_ADDR)
+
+    /*
+     * API が IPv6 で IPv4 射影アドレスが認められていないのにもかかわらず、
+     * IPv4 射影アドレスが指定されたらエラー
+     */
+    if (in6_is_addr_ipv4mapped(&p_dstaddr->ipaddr))
+        return E_PAR;
+
+#endif  /* of #if (API_PROTO == API_PROTO_IPV6) && !defined(DAPI_CFG_IP4MAPPED_ADDR) */
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+    /*
+     *  p_dstaddr または p_myaddr が NULL ならエラー
+     */
+    if (myaddr == NULL || dstaddr == NULL)
+        return E_PAR;
+
+#else   /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+    /*
+     *  p_dstaddr または p_myaddr が NULL 、
+     *  tmout が TMO_NBLK ならエラー
+     */
+    if (myaddr == NULL || dstaddr == NULL || tmout == TMO_NBLK)
+        return E_PAR;
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+    /*
+     *  CEP をロックし、API 機能コードとタスク識別子を記録する。
+     *  すでに記録されていれば、ペンディング中なのでエラー
+     */
+    if ((error = tecs_tcp_lock_cep(p_cellcb, TFN_TCP_CON_CEP)) != E_OK)
+        return error;
+
+    /* CEP の FSM がクローズ状態でなければエラー。*/
+    if (VAR_cep.fsm_state != TCP_FSM_CLOSED) {
+        error = E_OBJ;
+        goto err_ret;
+    }
+    cEstFlag_clear((FLGPTN)(~TCP_CEP_EVT_CLOSED));
+
+    /* シーケンス番号を初期化する。*/
+    if (cTCPFunctions_getTcpIss() == 0)
+        cTCPFunctions_initTcpIss();
+
+    /* 通信端点を初期化する。*/
+    tecs_tcp_init_cep(p_cellcb);
+
+    /*
+     *  IP アドレスを設定する。
+     *  p_myaddr が NADR (-1) ではなく、自 IP アドレスが ANY でなければ、
+     *  指定された IP アドレスを割り当てる。
+     */
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4)
+
+    if (p_myaddr != NADR && !IN4_IS_ADDR_ANY(&p_myaddr->ipaddr))
+        in6_make_ipv4mapped(&cep->myaddr.ipaddr, p_myaddr->ipaddr);
+    else
+        in6_make_ipv4mapped(&cep->myaddr.ipaddr, IF_GET_IFNET()->in4_ifaddr.addr);
+
+    in6_make_ipv4mapped(&cep->dstaddr.ipaddr, p_dstaddr->ipaddr);
+    cep->dstaddr.portno = p_dstaddr->portno;
+
+#else   /* of #if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4) */
+
+    if(ATTR_ipLength == 4) {
+        if (my4addr != 0  && my4addr != IPV4_ADDRANY)
+          cGetAddress_setMy4Address(my4addr);
+        else
+          cGetAddress_setMy4Address(cTCPOutput_getIPv4Address());
+        cGetAddress_setDst4Address(dst4addr);
+    }
+    // if (p_myaddr != NADR && !IN_IS_ADDR_ANY(&p_myaddr->ipaddr))
+    //     cep->myaddr.ipaddr = p_myaddr->ipaddr;
+    // else {
+    //     if (IN_ADDRWITHIFP(IF_GET_IFNET(), &cep->myaddr.ipaddr, &p_dstaddr->ipaddr) == NULL) {
+    //         error = E_PAR;
+    //         goto err_ret;
+    //         }
+    //     }
+
+    // cep->dstaddr   = *p_dstaddr;
+
+#endif  /* of #if defined(_IP6_CFG) && defined(_IP4_CFG) && (API_PROTO == API_PROTO_IPV4) */
+
+#if API_PROTO == API_PROTO_IPV4
+
+    /* TCP 通信端点のネットワーク層プロトコルを設定する。*/
+    cep->flags |= TCP_CEP_FLG_IPV4;
+
+#endif  /* of #if API_PROTO == API_PROTO_IPV4 */
+
+    /* 通信端点を設定する。*/
+    //NET_DEBUG_TCP5("tcp_con_cep3[c=%d,d=%lI.%d,s=%lI.%d]\n",
+    VAR_cep.fsm_state = TCP_FSM_SYN_SENT;
+    VAR_dstport       = dstport;
+    VAR_cep.iss       = cTCPFunctions_getTcpIss();
+    VAR_cep.timer[TCP_TIM_KEEP] = TCP_TVAL_KEEP_INIT;
+    // tcp_iss += TCP_ISS_INCR() / 2;
+    cTCPFunctions_setTcpIss(cTCPFunctions_getTcpIss() + (TCP_ISS_INCR() / 2));
+    // init_send_seq(cep);
+    VAR_cep.snd_una = VAR_cep.snd_nxt = VAR_cep.snd_max = VAR_cep.iss;
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+    /* タイムアウトをチェックする。*/
+    if (tmout == TMO_NBLK) {
+        /* ノンブロッキングコール */
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+
+#if API_PROTO == API_PROTO_IPV4
+
+        cep->p_dstaddr4   = p_dstaddr;
+        cep->p_myaddr4    = p_myaddr;
+        cep->p_dstaddr    = NULL;
+        cep->p_myaddr     = NULL;
+
+#else   /* of #if API_PROTO == API_PROTO_IPV4 */
+
+        cep->p_dstaddr4   = NULL;
+        cep->p_myaddr4    = NULL;
+        cep->p_dstaddr    = p_dstaddr;
+        cep->p_myaddr     = p_myaddr;
+
+#endif  /* of #if API_PROTO == API_PROTO_IPV4 */
+
+#else   /* of #if defined(_IP6_CFG) && defined(_IP4_CFG) */
+
+        cep->p_dstaddr    = p_dstaddr;
+        cep->p_myaddr     = p_myaddr;
+
+#endif  /* of #if defined(_IP6_CFG) && defined(_IP4_CFG) */
+
+        cep->snd_nblk_tfn = TFN_TCP_CON_CEP;
+
+        /* コネクションの開設をポストする。*/
+        cep->flags |= TCP_CEP_FLG_POST_OUTPUT;
+        sig_sem(SEM_TCP_POST_OUTPUT);
+        return E_WBLK;
+        }
+    else {
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+        /*
+         *  p_myaddr が NADR (-1) か、
+         *  自ポート番号が TCP_PORTANY なら、自動で割り当てる。
+         */
+        // if (p_myaddr == NADR || p_myaddr->portno == TCP_PORTANY)
+        //     tcp_alloc_auto_port(cep);
+        // else if ((error = tcp_alloc_port(cep, p_myaddr->portno)) != E_OK)
+        //     goto err_ret;
+        if (myport == TCP_PORTANY)
+            tecs_tcp_alloc_auto_port(p_cellcb);
+        else if ((error = tecs_tcp_alloc_port(p_cellcb, myport)) != E_OK)
+            goto err_ret;
+
+        /* コネクションの開設をポストする。*/
+        VAR_flags |= TCP_CEP_FLG_POST_OUTPUT;
+        cSemaphoreTcppost_signal();
+
+        /*
+         *  イベントが ESTABLISHED になるまで待つ。
+         *  イベントが CLOSED になった場合は、何らかのエラーが発生したか、
+         *  接続要求が拒否されたことを意味している。
+         */
+        error = cEstFlag_waitTimeout((TCP_CEP_EVT_CLOSED | TCP_CEP_EVT_ESTABLISHED), TWF_ORW, &flag, tmout);
+        if (error == E_OK) {
+            if (VAR_cep.error != E_OK)
+                error = VAR_cep.error;
+            else if (VAR_cep.fsm_state == TCP_FSM_CLOSED)
+                error = E_CLS;
+        }
+
+        cEstFlag_clear((FLGPTN)(~TCP_CEP_EVT_ESTABLISHED));
+
+        if (error != E_OK) {
+            /*
+             *  通信端点から受付口を解放し、
+             *  イベントフラグをクローズに設定する。
+             */
+            cREP4_unjoin();
+
+#if defined(_IP6_CFG) && defined(_IP4_CFG)
+            cep->rep4 = NULL;
+#endif
+
+            VAR_cep.fsm_state = TCP_FSM_CLOSED;
+            cEstFlag_set(TCP_CEP_EVT_CLOSED);
+        }
+
+#ifdef TCP_CFG_NON_BLOCKING
+
+    }
+
+#endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
+
+err_ret:
+    VAR_cep.snd_tskid = TA_NULL;
+    sTask_cCallingSendTask_unbind();
+    //TODO: cREP4_unjoin();
+    VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
+    return error;
 }
 
 /* #[<ENTRY_FUNC>]# eAPI_send
@@ -2355,6 +2612,121 @@ tecs_tcp_output (CELLCB *p_cellcb)
 		}
 
 	}
+}
+
+/*
+ *  tecs_tcp_alloc_auto_port -- 自動割り当てポート番号を設定する。
+ */
+
+static void
+tecs_tcp_alloc_auto_port (CELLCB *p_cellcb)
+{
+    int_t       ix;
+    uint16_t    portno;
+    CELLCB      *p_cb;
+
+    while (true) {
+        portno = tcp_port_auto ++;
+        if (tcp_port_auto > TCP_PORT_LAST_AUTO)
+            tcp_port_auto = TCP_PORT_FIRST_AUTO;
+
+#if defined(TNUM_TCP6_REPID)
+#if TNUM_TCP6_REPID > 0
+
+        for (ix = tmax_tcp6_repid; ix -- > 0; ) {
+
+#ifdef TCP_CFG_EXTENTIONS
+
+            if (VALID_TCP_REP(&tcp6_rep[ix]) && tcp6_rep[ix].myaddr.portno == portno) {
+                portno = TCP_PORTANY;
+                break;
+            }
+
+#else   /* of #ifdef TCP_CFG_EXTENTIONS */
+
+            if (tcp6_rep[ix].myaddr.portno == portno) {
+                portno = TCP_PORTANY;
+                break;
+            }
+
+#endif  /* of #ifdef TCP_CFG_EXTENTIONS */
+
+        }
+
+#endif  /* of #if TNUM_TCP6_REPID > 0 */
+#endif  /* of #if defined(TNUM_TCP6_REPID) */
+
+#if defined(TNUM_TCP4_REPID)
+#if TNUM_TCP4_REPID > 0
+
+        for (ix = tmax_tcp4_repid; ix -- > 0; ) {
+
+#ifdef TCP_CFG_EXTENTIONS
+
+            if (VALID_TCP_REP(&tcp4_rep[ix]) && tcp4_rep[ix].myaddr.portno == portno) {
+                portno = TCP_PORTANY;
+                break;
+            }
+
+#else   /* of #ifdef TCP_CFG_EXTENTIONS */
+
+            if (tcp4_rep[ix].myaddr.portno == portno) {
+                portno = TCP_PORTANY;
+                break;
+            }
+
+#endif  /* of #ifdef TCP_CFG_EXTENTIONS */
+
+        }
+
+#endif  /* of #if TNUM_TCP4_REPID > 0 */
+#endif  /* of #if defined(TNUM_TCP4_REPID) */
+
+        if (portno != TCP_PORTANY) {
+
+            syscall(wai_sem(SEM_TCP_CEP));
+            cSemaphoreTcpcep_wait();
+            FOREACH_CELL(ix, p_cb)
+            if (((tTCPCEP_VAR_flags(p_cb) & TCP_CEP_FLG_VALID) != 0) &&
+                 (tTCPCEP_VAR_myport(p_cb) == portno)) {
+                portno = TCP_PORTANY;
+                break;
+            }
+            END_FOREACH_CELL
+
+            if (portno != TCP_PORTANY) {
+                VAR_myport = portno;
+                cSemaphoreTcpcep_signal();
+                return;
+            }
+            cSemaphoreTcpcep_signal();
+        }
+    }
+}
+
+/*
+ *  tecs_tcp_alloc_port -- 指定されたポート番号を設定する。
+ */
+
+static ER
+tecs_tcp_alloc_port (CELLCB *p_cellcb, uint16_t portno)
+{
+    int_t   ix;
+    CELLCB *p_cb;
+
+    cSemaphoreTcpcep_wait();
+
+    FOREACH_CELL(ix, p_cb)
+    if (((tTCPCEP_VAR_flags(p_cb) & TCP_CEP_FLG_VALID) != 0) &&
+         (tTCPCEP_VAR_myport(p_cb) == portno)) {
+        cSemaphoreTcpcep_signal();
+        return E_PAR;
+    }
+    END_FOREACH_CELL
+
+    VAR_myport = portno;
+    cSemaphoreTcpcep_signal();
+    return E_OK;
 }
 
 /*
