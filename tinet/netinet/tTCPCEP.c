@@ -2572,7 +2572,31 @@ tecs_tcp_free_reassq (CELLCB *p_cellcb)
 
 static T_TCP_CEP *
 tecs_tcp_drop (CELLCB *p_cellcb, ER errno)
-{}
+{
+    T_TCP_CEP *cep = &VAR_cep;
+
+#ifdef SUPPORT_MIB
+
+    if ((VAR_cep.fsm_state == TCP_FSM_SYN_SENT) || (VAR_cep.fsm_state == TCP_FSM_SYN_RECVD)) {
+        NET_COUNT_MIB(tcp_stats.tcpAttemptFails, 1);
+    }
+
+#endif  /* of #ifdef SUPPORT_MIB */
+
+    VAR_cep.error = errno;
+    if (TCP_FSM_HAVE_RCVD_SYN(VAR_cep.fsm_state)) {
+        VAR_cep.fsm_state = TCP_FSM_CLOSED;
+
+        /* 送信と、送信後コネクションの切断を指示する。*/
+        VAR_flags |=  TCP_CEP_FLG_POST_OUTPUT | TCP_CEP_FLG_CLOSE_AFTER_OUTPUT;
+        cSemaphoreTcppost_signal();
+    }
+    else {
+        cep = tecs_tcp_close(p_cellcb);
+    }
+
+    return cep;
+}
 
 /*
  *  tecs_tcp_can_snd -- ペンディングしている送信のキャンセル
