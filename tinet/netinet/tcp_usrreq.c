@@ -479,7 +479,7 @@ tcp_sht_cep (ID cepid)
 /*
  *  tcp_snd_dat -- パケットの送信【標準機能】
  */
-
+#if 0
 ER_UINT
 tcp_snd_dat (ID cepid, void *data, int_t len, TMO tmout)
 {
@@ -575,7 +575,7 @@ err_ret:
 	cep->snd_tfn   = TFN_TCP_UNDEF;
 	return error;
 	}
-
+#endif /* of #if 0 */
 #endif	/* of #ifdef __tcp_snd_dat */
 
 #ifdef __tcp_snd_oob
@@ -841,7 +841,7 @@ err_ret:
 /*
  *  tcp_rcv_dat -- パケットの受信【標準機能】
  */
-
+#if 0
 ER_UINT
 tcp_rcv_dat (ID cepid, void *data, int_t len, TMO tmout)
 {
@@ -926,7 +926,7 @@ err_ret:
 	cep->rcv_tfn   = TFN_TCP_UNDEF;
 	return error;
 	}
-
+#endif	/* of #if 0 */
 #endif	/* of #ifdef __tcp_rcv_dat */
 
 #ifdef __tcp_rcv_oob

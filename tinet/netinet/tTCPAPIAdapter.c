@@ -89,9 +89,32 @@
 /*
  *  tcp_acp_cep -- 接続要求待ち (受動オープン)【標準機能】
  */
-#if 0
+#if 0 	//TODO:
 ER
 TCP_ACP_CEP (ID cepid, ID repid, T_IPEP *p_dstaddr, TMO tmout) {
-	return cTCPAPI4_accept(0, p_dstaddr, tmout);	//TODO
+	Descriptor(sREP4) desc;
+    cRepSelector_getRep(&desc, 0);
+
+	return cTCPAPI4_accept(desc, p_dstaddr, tmout);
 }
-#endif
+#endif 	/* of #if 0 */
+
+/*
+ *  tcp_snd_dat -- パケットの送信【標準機能】
+ */
+
+ER_UINT
+tcp_snd_dat (ID cepid, void *data, int_t len, TMO tmout)
+{
+	return cTCPAPI4_send(data, len, tmout);
+}
+
+/*
+ *  tcp_rcv_dat -- パケットの受信【標準機能】
+ */
+
+ER_UINT
+tcp_rcv_dat (ID cepid, void *data, int_t len, TMO tmout)
+{
+	return cTCPAPI4_receive(data, len, tmout);
+}
