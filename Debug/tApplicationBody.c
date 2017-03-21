@@ -119,7 +119,6 @@ eTaskBody_main()
 	while((rlen = cTCPAPI4_receive(data, 100, TMO_FEVR)) > 0) {
 		for(i = 0; i < 30; i++) {
 			data[i] ++;		/* 受信データに+1して送信する */
-			syslog(LOG_EMERG, "Debug: data[%d] = %d\n", i, data[i]);
 		}
 		data[20] = '\0';
 		cTCPAPI4_send(data, rlen, TMO_FEVR);
