@@ -377,7 +377,6 @@ eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 
 	align = 0;
 
-	// if ((error = tget_net_buf(&input, align, TMO_IF_MBED_GET_NET_BUF)) == E_OK && input != NULL) {
 	if ((error = eNicDriver_read_inputp_alloc(&input, align, TMO_IF_MBED_GET_NET_BUF)) == E_OK && input != NULL) {
 		dst = input->buf + IF_ETHER_NIC_HDR_ALIGN;
 		input->len = ethernet_read((char *)dst, len);

@@ -78,6 +78,9 @@
 #define COUNT 10000
 #define HIST 10000
 
+#define TCP_REPID	1
+#define TCP_CEPID	1
+
 /* 受け口関数 #_TEPF_# */
 /* #[<ENTRY_PORT>]# eTaskBody
  * entry port: eTaskBody
@@ -112,13 +115,12 @@ eTaskBody_main()
 
     cRepSelector_getRep(&desc, 0);
 	error = cTCPAPI4_accept(desc, &dstep4, TMO_FEVR);
-	syslog(LOG_EMERG, "Debug: ipaddr = 0x%x", dstep4.ipaddr);
-	syslog(LOG_EMERG, "Debug: portno = 0x%x", dstep4.portno);
 
 	while((rlen = cTCPAPI4_receive(data, 100, TMO_FEVR)) > 0) {
-		syslog(LOG_EMERG, "rlen = %d", rlen);
-		for(i = 0; i < 30; i++)
-			syslog(LOG_EMERG, "Debug: data[%d] = %d", i, data[i]);
+		for(i = 0; i < 30; i++) {
+			data[i] ++;		/* 受信データに+1して送信する */
+			syslog(LOG_EMERG, "Debug: data[%d] = %d\n", i, data[i]);
+		}
 		data[20] = '\0';
 		cTCPAPI4_send(data, rlen, TMO_FEVR);
 	}
