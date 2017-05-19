@@ -1465,7 +1465,7 @@ eAPI_connect(CELLIDX idx, const int8_t* myaddr, uint16_t myport, const int8_t* d
 	/* ここに処理本体を記述します #_TEFB_# */
     ER          error;
     FLGPTN      flag;
-    T_IN4_ADDR  my4addr = 0, dst4addr = 0;
+    T_IN4_ADDR  my4addr = *myaddr, dst4addr = *dstaddr;
 
 #if defined(SUPPORT_INET6) && defined(SUPPORT_INET4)
 
