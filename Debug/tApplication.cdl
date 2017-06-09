@@ -17,11 +17,10 @@ celltype tApplicationBody {
     entry sTaskBody eTaskBody;
 };
 
-/*
 [active,singleton]
-celltype tRelTest {
-    call sUDPCEPAPI4 cUDPAPI4;
+celltype tUDPApplicationBody {
+	require tKernel.eKernel;
 
-    entry sTaskBody eBody;
+    call sUDPCEPAPI4 cUDPAPI4;
+    entry sTaskBody eTaskBody;
 };
-*/
