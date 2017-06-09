@@ -478,7 +478,8 @@ eOutput_IPv4Reply(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmout)
 	ip4h->sum = 0;
 	ip4h->sum = cFunctions_checkSum((void*)ip4h, (uint_t)GET_IP4_HDR_SIZE(output));
 
-	syslog(LOG_EMERG,"IPv4 REPLY dst is %d ~~~ %d",(0xFF & ip4h->dst),ip4h->dst>>24 );
+	syslog(LOG_EMERG,"IPv4 REPLY dst is %d.%d.%d.%d",
+		(0x000000FF&ip4h->dst), (0x0000FF00&ip4h->dst)>>8, (0x00FF0000&ip4h->dst)>>16, (0xFF000000&ip4h->dst)>>24);
 
 	gw = cRoutingTable_routeAlloc(ntohl(ip4h->dst));
 
