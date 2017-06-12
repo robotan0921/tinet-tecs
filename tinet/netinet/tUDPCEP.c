@@ -446,6 +446,9 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 		//TODO: udph = GET_UDP_HDR(input,input->off.ifhdrlen+input->off.iphdrlenall);
 		uhoff = (uint_t)GET_UDP_HDR_OFFSET(input);
 		udph = GET_UDP_HDR(input, uhoff);
+		//TODO: mikan 宛先IPとポート番号は未実装
+		//TODO: p_dstaddr->portno = ntohs(udph->sport);
+		//TODO: IN_COPY_TO_HOST(&p_dstaddr->ipaddr, input);
 
 		/* データをバッファに移す。*/
 		ulen = ntohs(udph->ulen);
