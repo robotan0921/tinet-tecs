@@ -222,7 +222,7 @@ SUPPORT_INET4 = true
 #  トランスポート層の選択
 
 SUPPORT_TCP = true
-#SUPPORT_UDP = true
+SUPPORT_UDP = true
 
 #
 #  システムサービスの Makefile のインクルード
