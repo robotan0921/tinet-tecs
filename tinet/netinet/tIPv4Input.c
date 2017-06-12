@@ -326,10 +326,11 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 #if defined(SUPPORT_UDP) && ( (TNUM_UDP4_CEPID > 0) || \
                              ((TNUM_UDP6_CEPID > 0) && defined(API_CFG_IP4MAPPED_ADDR)))
 	case IPPROTO_UDP:
+syslog(LOG_EMERG, "[Debug]: cUDPInput in IPv4Input");
 	//TODO: if (is_cUDPInput_joined()) {
 		NET_COUNT_MIB(ip_stats.ipInDelivers, 1);
-		udp4_input(&input, &off, NULL);
-		//TODO: cUDPInput_UDPInput(inputp, size, (int8_t *)&dst,4 );//dstはホストオーダ順で入っている[0]=200 [1]=1 [2]=168 [3]=192//offmikan
+		// udp4_input(&input, &off, NULL);
+		cUDPInput_UDPInput(inputp, size, (int8_t *)&dst, 4); // dstはホストオーダ順で入っている[0]=200 [1]=1 [2]=168 [3]=192//offmikan
 		return;
 		break;
 #endif	/* of #if defined(SUPPORT_UDP) && TNUM_UDP4_CEPID > 0 */
