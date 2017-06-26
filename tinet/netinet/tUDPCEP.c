@@ -348,7 +348,7 @@ eAPI_send(CELLIDX idx, const int8_t* data, int32_t len, const int8_t* dstaddr, i
 		/* パケットを送信する。*/
 		//Debug: error = UDP_SEND_DATA(cep, p_dstaddr, data, len, tmout);
 		error = cUDPOutput_UDPOutput(data, len, dstaddr, cGetAddress_getAddress(),
-									addrlen, dstaddr, VAR_myport, VAR_offset, tmout);
+									addrlen, dstport, VAR_myport, VAR_offset, tmout);
 		VAR_sendTaskID = TA_NULL;
 
 #ifdef UDP_CFG_EXTENTIONS
