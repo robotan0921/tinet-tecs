@@ -285,13 +285,13 @@ eAPI_send(CELLIDX idx, const int8_t* data, int32_t len, const int8_t* dstaddr, i
 	int ip_hdr_size,if_mtu;
 	// 利用する下位プロトコルを決定する offmikan
 	VAR_offset.protocolflag = FLAG_USE_UDP;
-	if (ATTR_ipLength == 4) {
+	if (ATTR_ipLength == 4)
 		VAR_offset.protocolflag |= FLAG_USE_IPV4;
-	}
 	else if (ATTR_ipLength == 6)
 		VAR_offset.protocolflag |= FLAG_USE_IPV6;
 	else
 		return E_ID;
+
 	if ((error = cUDPOutput_getOffset(&VAR_offset)) != E_OK)
 		return error;
 	if (VAR_offset.protocolflag & FLAG_USE_ETHER)
@@ -349,7 +349,7 @@ eAPI_send(CELLIDX idx, const int8_t* data, int32_t len, const int8_t* dstaddr, i
 		//Debug: error = UDP_SEND_DATA(cep, p_dstaddr, data, len, tmout);
 		error = cUDPOutput_UDPOutput(data, len, dstaddr, cGetAddress_getAddress(),
 									addrlen, dstaddr, VAR_myport, VAR_offset, tmout);
-		VAR_sendTaskID - TA_NULL;
+		VAR_sendTaskID = TA_NULL;
 
 #ifdef UDP_CFG_EXTENTIONS
 
@@ -387,7 +387,7 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 	uint_t		ulen, uhoff;
 
 	/* p_dstaddr または data が NULL 、len < 0 か、tmout が TMO_NBLK ならエラー */
-	// TOSO:mikan とりあえずノンブロッキングコールには対応しない
+	// TODO:mikan とりあえずノンブロッキングコールには対応しない
 	if (data == NULL || len < 0 || tmout == TMO_NBLK)
 		return E_PAR;
 

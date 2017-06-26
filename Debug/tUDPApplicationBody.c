@@ -1,4 +1,4 @@
-/*
+`/*
  * このファイルは tecsgen によりテンプレートとして自動生成されました
  * このファイルを編集して使用することが意図されていますが
  * tecsgen の再実行により上書きされてしまうため、通常
@@ -55,12 +55,8 @@
 #define	E_ID	(-18)	/* illegal ID */
 #endif
 
-#define NUM_SEND_DATA 300
-#define COUNT 10000
-#define HIST 10000
-
-#define TCP_REPID	1
-#define TCP_CEPID	1
+#define BUF_SIZE	2048
+static char	udp_buf[BUF_SIZE];
 
 /* 受け口関数 #_TEPF_# */
 /* #[<ENTRY_PORT>]# eTaskBody
@@ -80,31 +76,51 @@ eTaskBody_main()
 	ID		tskid;
 	ER_UINT len;
 	ER		error = E_OK;
-	uint32_t i;
-	int8_t data[NUM_SEND_DATA];
 
 	getTaskId(&tskid);
 	syslog(LOG_EMERG, "[UDP] Application started!! [ID:%d]", tskid);
 
-	// T_IN4_ADDR myaddr  = MYIP4ADDRESS;
-	T_IN4_ADDR dstaddr = MAKE_IPV4_ADDR(192,168,1,56);
-	uint16_t   dstport = 50000;
+	T_IN4_ADDR	myaddr  = UDPV4ADDR_000;
+	uint16_t 	myport 	= UDPPORT_000;
+	T_IN4_ADDR	dstaddr = MAKE_IPV4_ADDR(192,168,1,56);
+	uint16_t 	dstport = 50000;
 
-	if ((len = cUDPAPI4_receive(data, len, TMO_FEVR)) >= 0) {
-		data[len] = '\0';
-		syslog(LOG_NOTICE, "[receive] from: %s.%d\n"
-		                   "msg: %s", ip2str(NULL, &dstaddr), dstport, data);
-		if (len > 0) {
-			len = cUDPAPI4_send(data, len, dstaddr, dstport, TMO_FEVR);
-			if (len >= 0)
-				syslog(LOG_NOTICE, "[send] len: %d", (uint16_t)len);
-			else
-				syslog(LOG_NOTICE, "[send] error: %s", itron_strerror(len));
+	for (int i = 5; i > 0; i--) {
+		syslog(LOG_EMERG, "[%d]", i);
+		delay(1000);
+	}
+
+#if 1
+	while (1) {
+		if ((len = cUDPAPI4_receive(udp_buf, sizeof(udp_buf), TMO_FEVR)) >= 0) {
+			udp_buf[len] = '\0';
+			syslog(LOG_EMERG, "[RECEIVE] <-- %s.%d\n"
+			                   "msg: %s", ip2str(NULL, &myaddr), myport, udp_buf);
+			if (len > 0) {
+				len = cUDPAPI4_send(udp_buf, len, dstaddr, dstport, TMO_FEVR);
+				if (len >= 0)
+					syslog(LOG_EMERG, "[SEND] --> %s.%d\n"
+			                   "msg: %s", ip2str(NULL, &dstaddr), dstport, udp_buf);
+				else
+					syslog(LOG_EMERG, "[SEND] error: %s", itron_strerror(len));
+			}
+		}
+		else {
+			syslog(LOG_EMERG, "[RECEIVE] error: %s", itron_strerror(len));
 		}
 	}
-	else {
-		syslog(LOG_NOTICE, "[receive] error: %s", itron_strerror(len));
+#else
+	while (1) {
+		for (int i = 10; i > 0; i--) {
+			udp_buf[i] = i;
+		}
+		len = cUDPAPI4_send(udp_buf, len, dstaddr, dstport, TMO_FEVR);
+		if (len >= 0)
+			syslog(LOG_EMERG, "[send] len: %d", (uint16_t)len);
+		else
+			syslog(LOG_EMERG, "[send] error: %s", itron_strerror(len));
 	}
+#endif
 
 	// return len >= 0 || len == E_TMOUT ? E_OK : len;
 	syslog(LOG_EMERG, "[UDP] Application ended!! [ID:%d]", tskid);

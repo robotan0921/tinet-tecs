@@ -216,10 +216,12 @@ eOutput_UDPOutput(const int8_t* outputp, int32_t size, const int8_t* dstaddr, co
 #endif	/* of #ifdef UDP_CFG_OUT_CHECKSUM */
 
 		/* ネットワーク層 (IP) の出力関数を呼び出す。*/
-		if ((error = cIPv4Output_IPv4Output((int8_t*)output, len, tmout )) == E_OK) {
+		if ((error = cIPv4Output_IPv4Output((int8_t*)output, len, tmout)) == E_OK) {
 			return size;
 		}
 	}
+
+	cIPv4Output_IPv4Output_outputp_dealloc((void*)output);
 
 err_ret:
 	// NET_COUNT_UDP(net_count_udp.out_err_packets, 1);

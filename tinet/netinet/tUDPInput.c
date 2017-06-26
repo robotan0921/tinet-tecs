@@ -206,13 +206,11 @@ eInput_UDPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, int32_t add
 		if (cCEPInput_check(ix, dstaddr, addrlen, ntohs(udph->dport)) == E_OK) {
 			len = (uint32_t)(ntohs(udph->ulen) - UDP_HDR_SIZE);
 
-			if( cCEPInput_receiveTaskID(ix) != TA_NULL) {
+			if (cCEPInput_receiveTaskID(ix) != TA_NULL) {
 				if (cCEPInput_sendData(ix, inputp, size) != E_OK)
 					goto buf_rel;
 			}
-
 			//TODO:mikan UDPのノンブロッキングコールをサポートするならばの処理
-
 			else if (is_cCallback_joined(ix)) {
 				/*
 				 * コールバックで勝手にバッファを解放する場合はとかそういう処理が入るのですが、
@@ -232,8 +230,9 @@ eInput_UDPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, int32_t add
 	/*
 	 * 該当CEPがなかった場合のエラー処理は下位プロトコルにコールバックで依頼する
 	 */
-	if ((input->off.protocolflag & FLAG_USE_IPV4) && is_cICMP4Error_joined())
-		cICMP4Error_error(inputp,size,ICMP4_UNREACH_PORT);
+	if ((input->off.protocolflag & FLAG_USE_IPV4) && is_cICMP4Error_joined()) {
+		cICMP4Error_error(inputp, size, ICMP4_UNREACH_PORT);
+	}
 
 #endif	/* of #if defined(_IP6_CFG) && defined(_IP4_CFG) && API_PROTO == API_PROTO_IPV4 */
 

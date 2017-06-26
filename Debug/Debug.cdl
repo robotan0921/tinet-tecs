@@ -94,6 +94,7 @@ cell tTCPCEP4 TCPCEP_000 {
     rbufSize        = 512;
 };
 
+/* UDPCEP (通信端点) */
 [generate(RepeatCellPlugin, "count = NUM_UDPCEP"),allocator(eInput.sendData.input=NetworkBuffer.eNetworkAlloc)]//逆リクワイアが使えないためとりあえず
 cell tUDPCEP4 UDPCEP_000 {
     v4addr           = UDPV4ADDR_000;
