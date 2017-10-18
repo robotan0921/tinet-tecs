@@ -4,7 +4,7 @@ u1 = UDPSocket.new()
 u1.bind('192.168.1.56', 8931)
 
 u2 = UDPSocket.new()
-u2.connect('192.168.1.56', 50000)
+u2.connect('192.168.1.200', 50000)
 
 
 loop do
@@ -15,7 +15,7 @@ loop do
     rescue
         puts "[Client] Error send"
     end
-
+    sleep 1
     begin
         p u1.recvfrom_nonblock(8931)
     rescue

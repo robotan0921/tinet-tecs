@@ -15,6 +15,7 @@ loop do
     rescue
         puts "[Client] Error send"
     end
+    sleep 1
     begin
         p u2.recvfrom_nonblock(1024)
     rescue => e_var
