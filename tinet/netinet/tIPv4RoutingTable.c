@@ -203,11 +203,12 @@ eRoutingTableTimer_callFunction()
 	now /= SYSTIM_HZ;
 
 	cSemaphore_wait();
-	for (ix = NUM_IN4_STATIC_ROUTE_ENTRY; ix < NUM_IN4_ROUTE_ENTRY; ix ++)
-	//TODO: ATTR とか VAR とか
-		if ((routing4_tbl[ix].flags & IN_RTF_DEFINED) &&
-		    (int_t)(routing4_tbl[ix].expire - now) <= 0)
-			routing4_tbl[ix].flags = 0;
+	for (ix = NUM_IN4_STATIC_ROUTE_ENTRY; ix < NUM_IN4_ROUTE_ENTRY; ix ++) {
+		if ((VAR_routingTable[ix].flags & IN_RTF_DEFINED) &&
+		    (int_t)(VAR_routingTable[ix].expire - now) <= 0) {
+			VAR_routingTable[ix].flags = 0;
+		}
+	}
 	cSemaphore_signal();
 }
 
@@ -228,9 +229,8 @@ tecs_in_rtnewentry (uint8_t flags, uint32_t tmo)
 
 	/* 空きエントリを探す。*/
 	for (ix = NUM_IN4_STATIC_ROUTE_ENTRY; ix < NUM_IN4_ROUTE_ENTRY; ix ++) {
-	//TODO: ATTR とか VAR とか
-		rt = &routing4_tbl[ix];
-		if ((routing4_tbl[ix].flags & IN_RTF_DEFINED) == 0) {
+		rt = &VAR_routingTable[ix];
+		if ((VAR_routingTable[ix].flags & IN_RTF_DEFINED) == 0) {
 			frt = rt;
 			break;
 		}
@@ -247,7 +247,7 @@ tecs_in_rtnewentry (uint8_t flags, uint32_t tmo)
 
 		cSemaphore_wait();
 		for (ix = NUM_IN4_STATIC_ROUTE_ENTRY; ix < NUM_IN4_ROUTE_ENTRY; ix ++) {
-			rt = &routing4_tbl[ix];
+			rt = &VAR_routingTable[ix];
 			diff = (int_t)(rt->expire - now);
 			if (diff <= 0) {	/* rt->expire <= now */
 				/* 既に、有効時間が過ぎている。*/
