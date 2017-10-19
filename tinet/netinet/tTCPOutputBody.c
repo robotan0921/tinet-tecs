@@ -289,6 +289,8 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 	T_TCP_HDR	*tcph;
 	uint_t		win = 0;
 	uint_t		hdr_offset;
+	T_IP4_HDR	*iph;
+	uint_t		hdr_size;
 
 	if ((flags & TCP_FLG_RST) == 0)
 		win = rbfree;
@@ -304,10 +306,21 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 		 * IPv4 では、IP ヘッダのオプションを削除する。
 		 * IPv6 では、拡張ヘッダを削除する。
 		 */
-		if (IP_REMOVE_OPTIONS(output) != E_OK) {
-			syscall(rel_net_buf(output));
-			return;
+		// if (IP_REMOVE_OPTIONS(output) != E_OK) {
+		// 	syscall(rel_net_buf(output));
+		// 	return;
+		// }
+		iph  = GET_IP4_HDR(output);
+		hdr_size = GET_IP4_HDR_SIZE(output);
+
+		if (hdr_size > IP4_HDR_SIZE) {
+			memmove((char *)iph + IP4_HDR_SIZE, GET_IP4_SDU(output),
+		    		(size_t)(iph->len - hdr_size));
+			iph->vhl   = IP4_MAKE_VHL(IPV4_VERSION, IP4_HDR_SIZE >> 2);
+			iph->len  -= (uint16_t)(hdr_size - IP4_HDR_SIZE);
+			output->len -= (uint16_t)(hdr_size - IP4_HDR_SIZE);
 		}
+		output->off.iphdrlenall = IP4_HDR_SIZE;
 
 		/* IP アドレスを交換する。*/
 		ip_exchg_addr(output);
