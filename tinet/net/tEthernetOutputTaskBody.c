@@ -168,8 +168,7 @@ eRawOutput_ethernetRawOutput(CELLIDX idx, int8_t* outputp, int32_t size, TMO tmo
 	T_NET_BUF *output = (T_NET_BUF*)outputp;	// TODO
 
 	/* Ethernet 出力キューに投入する。*/
-	if ((ercd = tsnd_dtq(DTQ_ETHER_OUTPUT, (intptr_t)output, tmout)) != E_OK) {
-	//TODO: if((ercd = cDataqueue_sendTimeout((intptr_t)outputp,tmout)) != E_OK) {
+	if ((ercd = cDataqueue_sendTimeout((intptr_t)outputp, tmout)) != E_OK) {
 		NET_COUNT_ETHER(net_count_ether.out_err_packets, 1);
 		NET_COUNT_MIB(if_stats.ifOutDiscards, 1);
 
@@ -217,8 +216,7 @@ eTaskBody_main(CELLIDX idx)
 	syslog(LOG_NOTICE, "[ETHER OUTPUT:%d] started.", tskid);
 
 	while (true) {
-		while (rcv_dtq(DTQ_ETHER_OUTPUT, (intptr_t*)&output) == E_OK) {
-			// TODO: cDataqueue_receive((intptr_t*)&output)
+		while (cDataqueue_receive((intptr_t*)&output) == E_OK) {
 			NET_COUNT_ETHER(net_count_ether.out_octets,  output->len);
 			NET_COUNT_MIB(if_stats.ifOutOctets, output->len + 8);
 			NET_COUNT_ETHER(net_count_ether.out_packets, 1);
