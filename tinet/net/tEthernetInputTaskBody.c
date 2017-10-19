@@ -176,7 +176,7 @@ eTaskBody_main(CELLIDX idx)
 	T_OFF_BUF 	etheroff = {0, 0, 0, ETHER_HDR_SIZE, ETHER_MTU, NETBUFFER_ALIGN, FLAG_USE_ETHER, 0, 0};
 
 	/* ネットワークインタフェース管理を初期化する。*/
-	ifinit();
+	// ifinit();
 
 	/* イーサネットネットワークインタフェース管理を初期化する。*/
 

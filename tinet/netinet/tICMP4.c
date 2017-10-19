@@ -468,17 +468,19 @@ icmp_unreach (CELLCB *p_cellcb, T_NET_BUF *input, uint_t ihoff)
 
 #if defined(SUPPORT_TCP)
 
-		if (ip4h->proto == IPPROTO_TCP)
+		if (ip4h->proto == IPPROTO_TCP) {
 			// tcp_notify(input, error);
 			cTCPInput_TCPNotify(input, input->len + sizeof(T_NET_BUF), error);
+		}
 
 #endif	/* of #if defined(SUPPORT_TCP) */
 
 #if defined(SUPPORT_UDP) && TNUM_UDP4_CEPID > 0
 
-		if (ip4h->proto == IPPROTO_UDP)
-			udp4_notify(input, error);
+		if (ip4h->proto == IPPROTO_UDP) {
+			// udp4_notify(input, error);
 			//TODO:
+		}
 
 #endif	/* of #if defined(SUPPORT_UDP) && TNUM_UDP4_CEPID > 0 */
 

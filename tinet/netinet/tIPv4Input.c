@@ -362,14 +362,10 @@ eIPv4Input_IPv4Input(CELLIDX idx, int8_t* inputp, int32_t size)
 		NET_COUNT_MIB(ip_stats.ipInUnknownProtos, 1);
 
 		/* ローカル IP アドレスに届いたデータグラムのみ ICMP エラーを通知する。*/
-		if (dst == ifp->in4_ifaddr.addr) {
-		//TODO: if ((dst == addr) && is_cICMP4Error_joined()) {
-			T_IN4_ADDR	src;
-
-			src = ntohl(ip4h->src);
+		if ((dst == addr) && is_cICMP4Error_joined()) {
+			T_IN4_ADDR	src = ntohl(ip4h->src);
 			syslog(LOG_INFO, "[IP] unexp proto: %d, src=%s.", ip4h->proto, ip2str(NULL, &src));
-			icmp_error(ICMP4_UNREACH_PROTOCOL, input);
-			//TODO: cICMP4Error_error(inputp,size,ICMP4_UNREACH_PROTOCOL);
+			cICMP4Error_error(inputp, size, ICMP4_UNREACH_PROTOCOL);
 		}
 		/*
 		 *  icmp_error では、ネットワークバッファ input を返却しないので

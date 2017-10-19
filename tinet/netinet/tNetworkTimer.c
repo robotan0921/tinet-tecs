@@ -150,11 +150,11 @@ eTaskBody_main()
 	/* IP を初期化する。*/
 
 #if defined(_IP6_CFG)
-	ip6_init();
+	// ip6_init();
 #endif
 
 #if defined(_IP4_CFG)
-	ip_init();
+	// ip_init();
 #endif
 
 #ifdef SUPPORT_TCP
@@ -168,7 +168,7 @@ eTaskBody_main()
 #if defined(SUPPORT_UDP) && defined(UDP_CFG_NON_BLOCKING)
 
 	/* UDP 出力タスクを起動する */
-	syscall(act_tsk(UDP_OUTPUT_TASK));
+	// syscall(act_tsk(UDP_OUTPUT_TASK));
 	//TODO: if (is_cUDPTask_joined()) cUDPTask_activate(); (UDP出力はタスク？？)
 
 #endif	/* of #if defined(SUPPORT_UDP) && defined(UDP_CFG_NON_BLOCKING) */
