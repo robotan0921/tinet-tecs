@@ -246,7 +246,7 @@ void ether_set_link_callback(ether_status_callback_fn link_callback)
 /*
  *  ether_raw_output -- Ethernet インタフェースの出力関数、MAC アドレス解決無し
  */
-
+#if 0
 ER
 ether_raw_output (T_NET_BUF *output, TMO tmout)
 {
@@ -268,11 +268,12 @@ ether_raw_output (T_NET_BUF *output, TMO tmout)
 		}
 	return error;
 	}
+#endif
 
 /*
  *  ether_output -- Ethernet インタフェースの出力関数、MAC アドレス解決有り
  */
-
+#if 0
 ER
 ether_output (T_NET_BUF *output, const void *dst, T_IF_ADDR *gw, TMO tmout)
 {
@@ -343,17 +344,15 @@ ether_output (T_NET_BUF *output, const void *dst, T_IF_ADDR *gw, TMO tmout)
 		NET_COUNT_ETHER(net_count_ether.out_err_packets, 1);
 	return error;
 	}
+#endif
 
 /*
  *  Ethernet 出力タスク
  */
-
+#if 0
 void
 ether_output_task(intptr_t exinf)
 {
-/* TSKID_tTask_EthernetOutputTask */
-	act_tsk(TSKID_tTask_EthernetOutputTask);
-#if 0
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*output;
 	ID		tskid;
@@ -399,19 +398,16 @@ ether_output_task(intptr_t exinf)
 
 		}
 	}
-#endif
 }
+#endif
 
 /*
  *  Ethernet 入力タスク
  */
-
+#if 0
 void
 ether_input_task(intptr_t exinf)
 {
-	/* TSKID_tTask_EthernetInputTask */
-	act_tsk(TSKID_tTask_EthernetInputTask);
-#if 0
 	T_IF_SOFTC	*ic;
 	T_NET_BUF	*input;
 	T_ETHER_HDR	*eth;
@@ -562,7 +558,7 @@ ether_input_task(intptr_t exinf)
 				}
 			}
 		}
-#endif
 }
+#endif
 
 #endif /* of #ifdef SUPPORT_ETHER */
