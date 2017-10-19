@@ -339,12 +339,12 @@ eTCPOutput_respond(CELLIDX idx, int8_t* outputp, int32_t size, T_TCP_CEP* cep, T
 	else if (cep == NULL)
 		return;
 	else {
-		if (tcpn_get_segment(&output, cep, 0,
-		                    0, (uint_t)net_buf_max_siz(),
-		                    NBA_SEARCH_ASCENT, TMO_TCP_GET_NET_BUF) != E_OK)
-			return;
-		tcph = GET_TCP_HDR(output, IF_IP_TCP_HDR_OFFSET(output));
-		flags |= TCP_FLG_ACK;
+		// if (tcpn_get_segment(&output, cep, 0,
+		//                     0, (uint_t)net_buf_max_siz(),
+		//                     NBA_SEARCH_ASCENT, TMO_TCP_GET_NET_BUF) != E_OK)
+		// 	return;
+		// tcph = GET_TCP_HDR(output, IF_IP_TCP_HDR_OFFSET(output));
+		// flags |= TCP_FLG_ACK;
 	}
 
 	tcph->seq   = htonl(seq);

@@ -829,14 +829,14 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 
 						VAR_cep.net_error = EV_CNNRF;	/* 接続不能 */
 						VAR_cep.error     = E_CLS;
-						NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_RSTS], 1);
-						NET_COUNT_MIB(tcp_stats.tcpAttemptFails, 1);
+						// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_RSTS], 1);
+						// NET_COUNT_MIB(tcp_stats.tcpAttemptFails, 1);
 						cep = tecs_tcp_close(p_cellcb);
 						break;
 
 					case TCP_FSM_ESTABLISHED:	/* コネクション開設完了			*/
 					case TCP_FSM_CLOSE_WAIT:	/* FIN 受信、クローズ待ち		*/
-						NET_COUNT_MIB(tcp_stats.tcpEstabResets, 1);
+						// NET_COUNT_MIB(tcp_stats.tcpEstabResets, 1);
 						/* fallthrough */
 
 					case TCP_FSM_FIN_WAIT_1:	/* 終了して、FIN 送信済み		*/
@@ -844,7 +844,7 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 
 						VAR_cep.net_error = EV_CNRST;	/* 接続リセット */
 						VAR_cep.error     = E_CLS;
-						NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_RSTS], 1);
+						// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_RSTS], 1);
 						/* no break; */
 
 					case TCP_FSM_CLOSING:		/* 終了、FIN 交換済み、ACK 待ち	*/
@@ -943,7 +943,7 @@ eCEPInput_input(CELLIDX idx, int8_t* inputp, int32_t size)
 				tcph->urp = 0;
 			}
 
-			NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DUP_SEGS], 1);
+			// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DUP_SEGS], 1);
 		}
 
 		/*
@@ -1116,13 +1116,13 @@ reset_drop:
 	}
 
 	/* input は tcp_respoond で返却される。*/
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_RSTS], 1);
-	NET_COUNT_MIB(tcp_stats.tcpOutRsts, 1);
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_RSTS], 1);
+	// NET_COUNT_MIB(tcp_stats.tcpOutRsts, 1);
 	return IPPROTO_DONE;
 
 drop:
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
-	NET_COUNT_MIB(tcp_stats.tcpInErrs, 1);
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
+	// NET_COUNT_MIB(tcp_stats.tcpInErrs, 1);
 	eCEPInput_input_inputp_dealloc(inputp);
 	return IPPROTO_DONE;
 }
@@ -2684,7 +2684,6 @@ tecs_tcp_alloc_auto_port (CELLCB *p_cellcb)
 
         if (portno != TCP_PORTANY) {
 
-            syscall(wai_sem(SEM_TCP_CEP));
             cSemaphoreTcpcep_wait();
             FOREACH_CELL(ix, p_cb)
             if (((tTCPCEP_VAR_flags(p_cb) & TCP_CEP_FLG_VALID) != 0) &&
@@ -3248,7 +3247,7 @@ tecs_tcp_can_rcv (CELLCB *p_cellcb, FN fncd)
     else {
 
         /* 受信再構成キューのネットワークバッファを解放する。*/
-        tcp_free_reassq(p_cellcb);
+        tecs_tcp_free_reassq(p_cellcb);
 
         /* 受信ウィンドバッファキューのネットワークバッファを解放する。*/
         VAR_cep.rwbuf_count = 0;
@@ -4371,23 +4370,26 @@ tecs_send_segment (CELLCB *p_cellcb, bool_t *sendalot, uint_t doff, uint_t win, 
 
 	if (len > 0) {
 		if (SEQ_LT(VAR_cep.snd_nxt, VAR_cep.snd_max)) {
-			NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_REXMIT_SEGS], 1);
-			NET_COUNT_MIB(tcp_stats.tcpRetransSegs, 1);
+			// NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_REXMIT_SEGS], 1);
+			// NET_COUNT_MIB(tcp_stats.tcpRetransSegs, 1);
 		}
 		//TCP_READ_SWBUF(cep, output, len, doff);
 		cCopySave_tcpReadSwbuf(&VAR_cep, output, size, doff, VAR_sbuf, VAR_sbufSize, offset, len);
 	}
 	else {
-		if (VAR_flags & TCP_CEP_FLG_ACK_NOW)
-			NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_ACKS], 1);
-		if (flags & (TCP_FLG_FIN | TCP_FLG_SYN | TCP_FLG_RST))
-			NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_CNTL_SEGS],  1);
+		if (VAR_flags & TCP_CEP_FLG_ACK_NOW) {
+			// NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_ACKS], 1);
+        }
+		if (flags & (TCP_FLG_FIN | TCP_FLG_SYN | TCP_FLG_RST)) {
+			// NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_CNTL_SEGS],  1);
+        }
 
 
 #ifdef TCP_CFG_EXTENTIONS
 
-		if (SEQ_LT(VAR_cep.snd_up, VAR_cep.snd_una))
-			NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_URG_SEGS], 1);
+		if (SEQ_LT(VAR_cep.snd_up, VAR_cep.snd_una)) {
+			// NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_URG_SEGS], 1);
+        }
 
 #endif	/* of #ifdef TCP_CFG_EXTENTIONS */
 
@@ -4582,7 +4584,7 @@ tecs_set_rexmt_timer (CELLCB *p_cellcb, T_TCP_TIME rtt)
 {
 	T_TCP_TIME delta;
 
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_RTT_UPDATES], 1);
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_RTT_UPDATES], 1);
 	if (VAR_cep.srtt != 0) {
 		/*
 		 *  srtt: 平滑化された RTT
@@ -4678,7 +4680,7 @@ tecs_reassemble (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, uint8_t flags
 		/*
 		 *  受信ウィンドバッファに空きがないときは破棄する。
 		 */
-		NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
+		// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
 		eCEPInput_input_inputp_dealloc(input);
 		VAR_flags |= TCP_CEP_FLG_ACK_NOW;
 		flags &= ~TCP_FLG_FIN;
@@ -5191,7 +5193,7 @@ tecs_syn_sent (CELLCB *p_cellcb, T_TCP_HDR *tcph, T_TCP_CEP *cep)
 
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
-				NET_COUNT_TCP(net_count_tcp[NC_TCP_CONNECTS], 1);
+				// NET_COUNT_TCP(net_count_tcp[NC_TCP_CONNECTS], 1);
 		}
 	}
 	else {
@@ -5356,13 +5358,13 @@ tecs_proc_ack1 (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, bool_t *needou
 #endif	/* of #ifdef TCP_CFG_NON_BLOCKING */
 #endif 	/* of #if 0 */
 			if (VAR_cep.rcv_tfn == TFN_TCP_ACP_CEP) {
-				NET_COUNT_MIB(tcp_stats.tcpPassiveOpens, 1);
-				NET_COUNT_TCP(net_count_tcp[NC_TCP_ACCEPTS], 1);
+				// NET_COUNT_MIB(tcp_stats.tcpPassiveOpens, 1);
+				// NET_COUNT_TCP(net_count_tcp[NC_TCP_ACCEPTS], 1);
 			}
 
 			if (VAR_cep.snd_tfn == TFN_TCP_CON_CEP) {
-				NET_COUNT_MIB(tcp_stats.tcpActiveOpens, 1);
-				NET_COUNT_TCP(net_count_tcp[NC_TCP_CONNECTS], 1);
+				// NET_COUNT_MIB(tcp_stats.tcpActiveOpens, 1);
+				// NET_COUNT_TCP(net_count_tcp[NC_TCP_CONNECTS], 1);
 			}
 		}
 
@@ -5399,7 +5401,7 @@ tecs_proc_ack1 (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, bool_t *needou
 				 *  同じ SEQ から始まるセグメントが、途中で消失した可能性がある。
 				 *  この場合は、高速再転送と高速リカバリを行う。
 				 */
-				NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DUP_ACKS], 1);
+				// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DUP_ACKS], 1);
 
 				if (VAR_cep.timer[TCP_TIM_REXMT] == 0 || tcph->ack != VAR_cep.snd_una) {
 
@@ -5540,7 +5542,7 @@ tecs_proc_ack2 (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, bool_t *needou
 	 *  削除してよいオクテット数 (acked) になる。
 	 */
 	acked = tcph->ack - VAR_cep.snd_una;
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_ACKS], 1);
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_ACKS], 1);
 
 	/*
 	 *  往復時間計測 (rtt) が設定されていて、計測開始 SEQ より

@@ -145,10 +145,10 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	T_TCP_TWCEP	*twcep;
 #endif	/* of #if defined(NUM_TCP_TW_CEP_ENTRY) && NUM_TCP_TW_CEP_ENTRY > 0 */
 
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_OCTETS],
-	              input->len - GET_IF_IP_HDR_SIZE(input));
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_SEGS], 1);
-	NET_COUNT_MIB(tcp_stats.tcpInSegs, 1);
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_OCTETS],
+	//               input->len - GET_IF_IP_HDR_SIZE(input));
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_SEGS], 1);
+	// NET_COUNT_MIB(tcp_stats.tcpInSegs, 1);
 
 	/* プロトコルフラグにTCPをセット */
 	input->off.protocolflag |= FLAG_USE_TCP;
@@ -157,7 +157,7 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 
 	/* ヘッダ長をチェックする。*/
 	if (input->len < IF_IP_TCP_HDR_SIZE(input)) {
-		NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_BAD_HEADERS], 1);
+		// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_BAD_HEADERS], 1);
 		goto drop;
 	}
 
@@ -175,7 +175,7 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 
 	/* TCP ヘッダ長をチェックする。*/
 	if (TCP_HDR_LEN(tcph->doff) < TCP_HDR_SIZE || TCP_HDR_LEN(tcph->doff) > seglen) {
-		NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_BAD_HEADERS], 1);
+		// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_BAD_HEADERS], 1);
 		syslog(LOG_EMERG, "TCP packets are Droped when length!");
 		goto drop;
 	}
@@ -243,13 +243,13 @@ eInput_TCPInput(int8_t* inputp, int32_t size, const int8_t* dstaddr, const int8_
 	}
 
 	/* input は tcp_respoond で返却される。*/
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_RSTS], 1);
-	NET_COUNT_MIB(tcp_stats.tcpOutRsts, 1);
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_SEND_RSTS], 1);
+	// NET_COUNT_MIB(tcp_stats.tcpOutRsts, 1);
 	return IPPROTO_DONE;
 
 drop:
-	NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
-	NET_COUNT_MIB(tcp_stats.tcpInErrs, 1);
+	// NET_COUNT_TCP(net_count_tcp[NC_TCP_RECV_DROP_SEGS], 1);
+	// NET_COUNT_MIB(tcp_stats.tcpInErrs, 1);
 	eInput_TCPInput_inputp_dealloc(inputp);
 	return IPPROTO_DONE;
 }
