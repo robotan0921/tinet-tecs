@@ -80,17 +80,19 @@ endif
 #
 #  ネットワークサービスに関する定義
 #
+TINET_COBJS := $(TINET_COBJS) ethernet.o net_subr.o in_subr.o
+
 
 #  汎用通信機能
 
 TINET_DIR = $(TINET_ROOT)/net:$(TINET_ROOT)/netinet:$(TINET_ROOT)/netinet6
-TINET_COBJS := $(TINET_COBJS) \
+# TINET_COBJS := $(TINET_COBJS) \
 	       net_buf.o net_count.o net_subr.o net_timer.o if.o \
                in_subr.o tinet_cfg.o route_cfg.o
 
 #  IPv6
 
-TINET_COBJS := $(TINET_COBJS) \
+# TINET_COBJS := $(TINET_COBJS) \
                in6.o in6_ifattach.o nd6_rtr.o \
                in6_subr.o ip6_input.o icmp6.o \
                dest6.o route6.o frag6.o \
@@ -100,7 +102,7 @@ TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/netinet6/ip6.cfg
 
 #  IPv4
 
-TINET_COBJS := $(TINET_COBJS) \
+# TINET_COBJS := $(TINET_COBJS) \
                ip_input.o ip_output.o ip_icmp.o in4_subr.o
 TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/netinet/ip.cfg
 
@@ -108,7 +110,7 @@ TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/netinet/ip.cfg
 
 ifeq ($(NET_IF),loop)
 
-	TINET_COBJS := $(TINET_COBJS) if_loop.o
+	# TINET_COBJS := $(TINET_COBJS) if_loop.o
 	TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/net/if_loop.cfg
 	TINET_CDEFS := $(TINET_CDEFS) -DSUPPORT_LOOP
 
@@ -118,21 +120,21 @@ endif
 
 ifeq ($(NET_IF),ppp)
 
-	TINET_COBJS := $(TINET_COBJS) \
+	# TINET_COBJS := $(TINET_COBJS) \
 	               ppp.o ppp_hdlc.o ppp_lcp.o ppp_fsm.o \
 	               ppp_auth.o ppp_upap.o
 	TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/net/ppp.cfg
 	TINET_CDEFS := $(TINET_CDEFS) -DSUPPORT_PPP
 
 #  IPv6用 cp
-	TINET_COBJS := $(TINET_COBJS) ppp_ipv6cp.o
+	# TINET_COBJS := $(TINET_COBJS) ppp_ipv6cp.o
 
 #  IPv4用 cp
-	TINET_COBJS := $(TINET_COBJS) ppp_ipcp.o
+	# TINET_COBJS := $(TINET_COBJS) ppp_ipcp.o
 
 ifeq ($(PPP_CFG_MODEM),true)
 
-	TINET_COBJS := $(TINET_COBJS) ppp_modem.o 
+	# TINET_COBJS := $(TINET_COBJS) ppp_modem.o 
 	TINET_CDEFS := $(TINET_CDEFS) -DPPP_CFG_MODEM
 
 endif
@@ -147,7 +149,7 @@ endif
 
 ifeq ($(NET_IF),ether)
 
-	TINET_COBJS := $(TINET_COBJS) ethernet.o if6_ether.o if_ether.o
+	# TINET_COBJS := $(TINET_COBJS) ethernet.o if6_ether.o if_ether.o
 	TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) \
 	                    $(TINET_ROOT)/net/ethernet.cfg \
 	                    $(TINET_ROOT)/netinet/if_ether.cfg
@@ -160,7 +162,7 @@ endif
 
 ifeq ($(SUPPORT_TCP),true)
 
-	TINET_COBJS := $(TINET_COBJS) \
+	# TINET_COBJS := $(TINET_COBJS) \
 	               tcp_input.o tcp_output.o tcp_timer.o \
 	               tcp_subr.o tcp_subr_cs.o tcp_subr_ncs.o 
 	TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/netinet/tcp.cfg
@@ -172,7 +174,7 @@ endif
 
 ifeq ($(SUPPORT_UDP),true)
 
-	TINET_COBJS := $(TINET_COBJS) \
+	# TINET_COBJS := $(TINET_COBJS) \
 	               udp_input.o udp_output.o udp_subr.o
 	TINET_KERNEL_CFG := $(TINET_KERNEL_CFG) $(TINET_ROOT)/netinet/udp.cfg
 	TINET_CDEFS := $(TINET_CDEFS) -DSUPPORT_UDP
@@ -186,11 +188,11 @@ endif
 ifeq ($(NO_USE_TINET_LIBRARY),true)
 
 	ifeq ($(SUPPORT_TCP),true)
-		TINET_COBJS := $(TINET_COBJS) tcp_usrreq.o 
+		# TINET_COBJS := $(TINET_COBJS) tcp_usrreq.o 
 	endif
 
 	ifeq ($(SUPPORT_UDP),true)
-		TINET_COBJS := $(TINET_COBJS) udp_usrreq.o udp_usrreq_nblk.o
+		# TINET_COBJS := $(TINET_COBJS) udp_usrreq.o udp_usrreq_nblk.o
 	endif
 
 else
