@@ -1710,8 +1710,7 @@ eAPI_connect(CELLIDX idx, const int8_t* myaddr, uint16_t myport, const int8_t* d
 
 err_ret:
     VAR_cep.snd_tskid = TA_NULL;
-    sTask_cCallingSendTask_unbind();
-    //TODO: cREP4_unjoin();
+    cREP4_unjoin();
     VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
     return error;
 }
@@ -1825,7 +1824,7 @@ eAPI_send(CELLIDX idx, const int8_t* data, int32_t len, TMO tmout)
 err_ret:
 	VAR_cep.snd_tskid = TA_NULL;
 	sTask_cCallingSendTask_unbind();
-    //TODO: cREP4_unjoin();
+    cREP4_unjoin();
 	VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
 	return error;
 }
@@ -1931,8 +1930,7 @@ eAPI_receive(CELLIDX idx, int8_t* data, int32_t len, TMO tmout)
 
 err_ret:
 	VAR_cep.rcv_tskid = TA_NULL;
-    //TODO: cREP4_unjoin();
-	sTask_cCallingReceiveTask_unbind();
+    cREP4_unjoin();
 	VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
 	return error;
 }
@@ -2168,8 +2166,7 @@ eAPI_close(CELLIDX idx, TMO tmout)
 #endif  /* of #ifdef TCP_CFG_NON_BLOCKING */
 
     VAR_cep.rcv_tskid = TA_NULL;
-    sTask_cCallingReceiveTask_unbind();
-    //TODO: cREP4_unjoin();
+    cREP4_unjoin();
     VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
     return error;
 }
@@ -3022,8 +3019,6 @@ tecs_tcp_close (CELLCB *p_cellcb)
 		/* 記憶されているタスク ID と API 機能コードをクリアーする。*/
 		VAR_cep.snd_tskid = TA_NULL;
 		VAR_cep.rcv_tskid = TA_NULL;
-		//TODO: sTask_cCallingReceiveTask_unbind();
-		//TODO: sTask_cCallingSendTask_unbind();
 		VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
 		VAR_cep.rcv_tfn   = TFN_TCP_UNDEF;
 
@@ -3208,8 +3203,7 @@ tecs_tcp_can_snd (CELLCB *p_cellcb, FN fncd)
             error = cCallingSendTask_releaseWait();
 
         VAR_cep.snd_tskid = TA_NULL;
-        sTask_cCallingSendTask_unbind();
-        //TODO: cREP4_unjoin();
+        cREP4_unjoin();
         VAR_cep.snd_tfn   = TFN_TCP_UNDEF;
     }
 
@@ -3318,8 +3312,7 @@ tecs_tcp_can_rcv (CELLCB *p_cellcb, FN fncd)
             error = cCallingReceiveTask_releaseWait();
 
         cep->rcv_tskid = TA_NULL;
-        sTask_cCallingReceiveTask_unbind();
-        //TODO: cREP4_unjoin();
+        cREP4_unjoin();
         cep->rcv_tfn   = TFN_TCP_UNDEF;
     }
 
@@ -5258,7 +5251,7 @@ tecs_proc_ack1 (CELLCB *p_cellcb, T_NET_BUF *input, uint_t thoff, bool_t *needou
 			VAR_cep.fsm_state  = TCP_FSM_ESTABLISHED;
 
 			/* TCP 通信端点からTCP 受付口を解放する。*/
-			//TODO: sREP4_cREP4_unbind();
+			//TODO: cREP4_unjoin();
 			// cep->rep = NULL;
 
 #if defined(_IP6_CFG) && defined(_IP4_CFG)
