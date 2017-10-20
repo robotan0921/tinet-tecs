@@ -524,13 +524,6 @@ T_IF_SOFTC *
 if_mbed_get_softc (void) {
 	return &if_softc;
 }
-/*
- * mbed_watchdog -- ネットワークインタフェースのワッチドッグタイムアウト
- */
-void
-if_mbed_watchdog (T_IF_SOFTC *ic) {
-	if_mbed_reset(ic);
-}
 
 /*
  *  MBED Ethernet Controler 送受信割り込みハンドラ

@@ -177,6 +177,7 @@ eTaskBody_main(CELLIDX idx)
 
 	/* ネットワークインタフェース管理を初期化する。*/
 	// ifinit();
+	cNicDriver_reset();
 
 	/* イーサネットネットワークインタフェース管理を初期化する。*/
 

@@ -4,7 +4,6 @@ import("net/tBuffer.cdl");
 import("netinet/tNetworkTimer.cdl");
 
 import("netdev/if_mbed/tIfMbed.cdl");
-import("netdev/if_mbed/tIfMbedAdapter.cdl");
 
 import("net/tEthernet.cdl");
 
@@ -309,11 +308,6 @@ cell tTCPAPIAdapter TCPAPIAdapter {
 
     cTCPAPI4 = TCPCEP_000.eAPI;
     cREP4_000 = REP4_000.eREP4;
-};
-
-cell tIfMbedAdapter IfMbedAdapter {
-
-	cNicDriver = IfMbed.eNicDriver;
 };
 
 /*
