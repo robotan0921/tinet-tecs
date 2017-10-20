@@ -720,7 +720,8 @@ celltype tInterruptHandler {
 
 	factory {
 		write("tecsgen.cfg",
-				"DEF_INH(%s, { %s, tInterruptHandler_start });", attribute);
+				"DEF_INH(%s, { %s, tInterruptHandler_start });",
+						interruptHandlerNumber, attribute);
 	};
 	FACTORY {
 		write("tecsgen.cfg", "#include \"$ct$_tecsgen.h\"");
