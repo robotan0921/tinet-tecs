@@ -395,8 +395,7 @@ tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 		cArpSemaphore_signal();
 
 		/* ペンディングされているフレームを送信する。*/
-		//TODO: IF_RAW_OUTPUT(pending, TMO_FEVR);
-
+		cEthernetRawOutput_ethernetRawOutput((int8_t*)pending, GET_IF_ARP_HDR_SIZE(pending), TMO_FEVR);
 	}
 	else
 		cArpSemaphore_signal();
@@ -425,7 +424,6 @@ reply:
 
 	/* ARP 応答を送信する。*/
 	cEthernetRawOutput_ethernetRawOutput((int8_t*)input, GET_IF_ARP_HDR_SIZE(input), TMO_FEVR);
-	// IF_RAW_OUTPUT(input, TMO_FEVR);
 	return;
 
 err_ret:
@@ -525,7 +523,7 @@ tecs_arp_request (CELLCB *p_cellcb, const uint8_t *macaddress, T_IN4_ADDR dst)
 		ahtonl(et_arph->sproto, src);
 		ahtonl(et_arph->tproto, dst);
 		/* 送信する。*/
-		error = cEthernetRawOutput_ethernetRawOutput((int8_t*)arp_req, GET_IF_ARP_HDR_SIZE(input), TMO_ARP_OUTPUT);
+		error = cEthernetRawOutput_ethernetRawOutput((int8_t*)arp_req, GET_IF_ARP_HDR_SIZE(arp_req), TMO_ARP_OUTPUT);
 	}
 	if (error != E_OK)
 		NET_COUNT_ARP(net_count_arp.out_err_packets, 1);
