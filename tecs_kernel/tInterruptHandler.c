@@ -46,9 +46,10 @@
  *  割込みハンドラ本体の呼出し
  */
 void
-tInterruptHandler_start(intptr_t exinf)
+tInterruptHandler_start(void)
 {
-	CELLCB	*p_cellcb = (CELLCB *) exinf;
+	// CELLCB	*p_cellcb = (CELLCB *) exinf;
+	CELLCB	 *p_cellcb;
 
 	ciInterruptHandlerBody_main();
 }
