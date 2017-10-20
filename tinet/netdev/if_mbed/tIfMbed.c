@@ -466,6 +466,9 @@ eNicDriver_reset(CELLIDX idx)
  * global_name:  tIfMbed_eiBody_main
  * oneway:       false
  * #[</ENTRY_FUNC>]# */
+/*
+ *  MBED Ethernet Controler 送受信割り込みハンドラ
+ */
 void
 eiBody_main(CELLIDX idx)
 {
@@ -478,7 +481,12 @@ eiBody_main(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
+	if ((ETHER.EESR0 & ETHER_EESR0_TC) != 0) {
+		/* 送信割り込み処理 */
+		ciSemaphoreSend_signal();
+	}
 
+	INT_Ether();
 }
 
 /* #[<POSTAMBLE>]#
@@ -523,38 +531,4 @@ if_mbed_stop ( T_MBED_SOFTC *sc) {
 T_IF_SOFTC *
 if_mbed_get_softc (void) {
 	return &if_softc;
-}
-
-/*
- *  MBED Ethernet Controler 送受信割り込みハンドラ
- */
-void	// TODO: Componentize (TECS)
-if_mbed_eth_handler (void) {
-	if ((ETHER.EESR0 & ETHER_EESR0_TC) != 0) {
-		/* 送信割り込み処理 */
-		isig_sem(SEMID_tSemaphore_SemaphoreNicSend);
-	}
-
-	INT_Ether();
- //    uint32_t stat_edmac;
- //    uint32_t stat_etherc;
-
- //    /* Clear the interrupt request flag */
- //    stat_edmac = (ETHER.EESR0 & ETHER.EESIPR0);       /* Targets are restricted to allowed interrupts */
- //    ETHER.EESR0 = stat_edmac;
- //    /* Reception-related */
- //    if (stat_edmac & EDMAC_EESIPR_INI_RECV) {
-	// 	// isig_sem(if_softc.semid_rxb_ready);
-	// 	isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
- //    }
-	// if (stat_edmac & EDMAC_EESIPR_INI_TRANS) {
-	// 	// isig_sem(if_softc.semid_txb_ready);
-	// 	isig_sem(SEMID_tSemaphore_SemaphoreNicSend); //#define SEMID_tSemaphore_SemaphoreNicSend 7
-	// }
- //    /* E-MAC-related */
- //    if (stat_edmac & EDMAC_EESIPR_INI_EtherC) {
- //        /* Clear the interrupt request flag */
- //        stat_etherc = (ETHER.ECSR0 & ETHER.ECSIPR0);  /* Targets are restricted to allowed interrupts */
- //        ETHER.ECSR0  = stat_etherc;
- //    }
 }

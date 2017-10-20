@@ -110,7 +110,7 @@ extern void if_mbed_reset(T_IF_SOFTC *ic);
 extern T_NET_BUF *if_mbed_read(T_IF_SOFTC *ic);
 extern void if_mbed_start(T_IF_SOFTC *ic, T_NET_BUF *output);
 extern ER if_mbed_addmulti(T_IF_SOFTC *ic);
-extern void if_mbed_eth_handler(void);
+// extern void if_mbed_eth_handler(void);
 //void if_mbed_phy_task(intptr_t arg);
 
 #endif /* #if !defined(TOPPERS_MACRO_ONLY) && !defined(_MACRO_ONLY) */

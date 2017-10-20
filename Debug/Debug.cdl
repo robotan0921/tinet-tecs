@@ -281,11 +281,32 @@ cell tIfMbed IfMbed {
 
 	ciSemaphoreSend 	= SemaphoreNicSend.eiSemaphore;
 	cSemaphoreReceive 	= SemaphoreNicReceive.eSemaphore;
-	cInterruptRequest 	= NicInterrupt.eInterruptRequest;
+	cInterruptRequest 	= NicInterruptRequest.eInterruptRequest;
 
     cNetworkTimer = NetworkTimer.eNetworkTimer[0];
 
     cTask = IfMbedPhyTask.eTask;
+};
+
+/**
+* // By tinet_target_config.h
+* #define INTNO_IF_MBED  ETHERI_IRQn
+* #define INTNO_IF_MBED  ETHERI_IRQn
+* // By device.h (MBRA1H.h)
+* ETHERI_IRQn          = 359,
+**/
+
+cell tInterruptHandler NicInterruptHandler {
+    ciInterruptHandlerBody = IfMbed.eiBody;
+
+    interruptHandlerNumber = 359;
+    attribute = C_EXP("TA_NULL");
+};
+
+cell tInterruptRequest NicInterruptRequest {
+    interruptNumber   = 359;
+    attribute         = C_EXP("INTATR_IF_MBED");
+    interruptPriority = C_EXP("INTPRI_IF_MBED");
 };
 
 cell tTask IfMbedPhyTask {
@@ -359,14 +380,6 @@ cell tSemaphore SemaphoreNicReceive {
     attribute 		= C_EXP("TA_TPRI");
     initialCount 	= 0;
     maxCount 		= 1;
-};
-cell tISRWithInterruptRequest NicInterrupt {
-
-	ciISRBody = IfMbed.eiBody;
-
-	interruptNumber 	= (0x200);
-	interruptAttribute 	= C_EXP("TA_ENAINT");
-	interruptPriority 	= -8;
 };
 
 /**
