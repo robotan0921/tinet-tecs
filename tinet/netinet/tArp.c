@@ -395,7 +395,8 @@ tecs_in_arpinput (CELLCB *p_cellcb, const uint8_t *macaddress, T_NET_BUF *input)
 		cArpSemaphore_signal();
 
 		/* ペンディングされているフレームを送信する。*/
-		// cEthernetRawOutput_ethernetRawOutput((int8_t*)pending, GET_IF_ARP_HDR_SIZE(pending), TMO_FEVR);
+		//TODO: cEthernetRawOutput_ethernetRawOutput((int8_t*)pending, GET_IF_ARP_HDR_SIZE(pending), TMO_FEVR);
+		// TCPのコネクションが切断されてしまう
 	}
 	else
 		cArpSemaphore_signal();
