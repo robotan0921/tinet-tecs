@@ -51,7 +51,7 @@ extern void	tTask_start(intptr_t exinf);
 extern void tTimeEventHandler_start(intptr_t exinf);
 
 extern void tISR_start(intptr_t exinf);
-extern void tInterruptHandler_start(void);
+extern void tInterruptHandler_start(intptr_t exinf);
 extern void tCpuExceptionHandler_start(void *p_excinf);
 
 extern void tInitializeRoutine_start(intptr_t exinf);
