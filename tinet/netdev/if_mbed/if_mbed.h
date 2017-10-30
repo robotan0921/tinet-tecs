@@ -103,7 +103,7 @@ typedef struct t_net_buf T_NET_BUF;
  */
 
 extern T_IF_SOFTC *if_mbed_get_softc(void);
-extern void if_mbed_watchdog(T_IF_SOFTC *ic);
+// extern void if_mbed_watchdog(T_IF_SOFTC *ic);
 extern void if_mbed_probe(T_IF_SOFTC *ic);
 extern void if_mbed_init(T_IF_SOFTC *ic);
 extern void if_mbed_reset(T_IF_SOFTC *ic);

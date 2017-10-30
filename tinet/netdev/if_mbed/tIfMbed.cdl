@@ -31,7 +31,7 @@ celltype tIfMbed {
 
 		uint16_t timer;
 
-        T_MBED_SOFTC *sc;
+        T_MBED_SOFTC mbed_softc;
 	};
 };
 

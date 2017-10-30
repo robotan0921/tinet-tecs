@@ -17,7 +17,7 @@
  * macaddr4         uint8_t          VAR_macaddr4
  * macaddr5         uint8_t          VAR_macaddr5
  * timer            uint16_t         VAR_timer
- * sc               T_MBED_SOFTC*    VAR_sc
+ * sc               T_MBED_SOFTC     VAR_mbed_softc
  *
  * 呼び口関数 #_TCPF_#
  * require port: signature:sKernel context:task
@@ -152,9 +152,9 @@ static T_MBED_SOFTC mbed_softc;
 T_IF_SOFTC if_softc = {
 	{0,},						/* ネットワークインタフェースのアドレス	*/
 	0,							/* 送信タイムアウト			*/
-	&mbed_softc,				/* ディバイス依存のソフトウェア情報	*/
-	SEM_IF_MBED_SBUF_READY,	/* 送信セマフォ			*/
-	SEM_IF_MBED_RBUF_READY,	/* 受信セマフォ			*/
+	&mbed_softc,			/* ディバイス依存のソフトウェア情報	*/
+	SEMID_tSemaphore_SemaphoreNicSend,		/* 送信セマフォ			*/
+	SEMID_tSemaphore_SemaphoreNicReceive,	/* 受信セマフォ			*/
 
 #ifdef SUPPORT_INET6
 
@@ -167,7 +167,7 @@ T_IF_SOFTC if_softc = {
  *  局所変数
  */
 
-static void if_mbed_stop ( T_MBED_SOFTC *sc);
+static void if_mbed_stop ( CELLCB *p_cellcb );
 static void if_mbed_init_sub ( CELLCB *p_cellcb );
 
 #ifdef SUPPORT_INET6
@@ -266,7 +266,13 @@ eWatchdogTimer_callFunction(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-
+	if (VAR_timer > 0) {
+		VAR_timer--;
+		if (VAR_timer == 0) {
+			if_mbed_watchdog(p_cellcb);
+		}
+	}
+	cNetworkTimer_timeout(10);
 }
 
 /* #[<ENTRY_PORT>]# eNicDriver
@@ -296,11 +302,7 @@ eNicDriver_init(CELLIDX idx)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	/**
-	*	Debug用
-	*/
 	VAR_timer = 0;
-	VAR_sc = &mbed_softc;
 
 	/* mbed_init 本体を呼び出す。*/
 	if_mbed_init_sub(p_cellcb);
@@ -330,7 +332,6 @@ eNicDriver_start(CELLIDX idx, int8_t* outputp, int32_t size, uint8_t align)
 	} /* end if VALID_IDX(idx) */
 
 	/* ここに処理本体を記述します #_TEFB_# */
-	//T_MBED_SOFTC *sc = ic->sc;
 	struct t_net_buf *output = (struct t_net_buf*)outputp;
 	int32_t len, res, pos;
 
@@ -363,10 +364,9 @@ eNicDriver_read(CELLIDX idx, int8_t** inputp, int32_t* size, uint8_t align)
 *	とりあえず既存の実装にのっとり,移植する
 *	今後，修正を行う
 **/
-//	T_MBED_SOFTC *sc = p_cellcb->sc;
 	T_NET_BUF *input = NULL;
 	inputp = &input;
-	//uint_t align;
+	//uint_t align
 	int len;
 	uint8_t *dst;
 	ER error;
@@ -449,8 +449,8 @@ eNicDriver_reset(CELLIDX idx)
 	ethernetext_start_stop(0);
 
 	NET_COUNT_ETHER_NIC(net_count_ether_nic[NC_ETHER_NIC_RESETS], 1);
-	if_mbed_stop( p_cellcb->sc );
-	if_mbed_init_sub( p_cellcb );
+	if_mbed_stop(p_cellcb);
+	if_mbed_init_sub(p_cellcb);
 
     ethernetext_start_stop(1);
 }
@@ -519,10 +519,9 @@ if_mbed_init_sub ( CELLCB *p_cellcb ) {
  *    注意: NIC 割り込み禁止状態で呼び出すこと。
  */
 static void
-if_mbed_stop ( T_MBED_SOFTC *sc) {
+if_mbed_stop (CELLCB *p_cellcb) {
 	ethernetext_start_stop(0);
 }
-
 
 /*
  *  get_mbed_softc -- ネットワークインタフェースのソフトウェア情報を返す。
@@ -532,3 +531,17 @@ T_IF_SOFTC *
 if_mbed_get_softc (void) {
 	return &if_softc;
 }
+
+/*
+ * mbed_watchdog -- ネットワークインタフェースのワッチドッグタイムアウト
+ */
+ void
+ if_mbed_watchdog (CELLCB *p_cellcb) {
+ 	ethernetext_start_stop(0);
+
+	NET_COUNT_ETHER_NIC(net_count_ether_nic[NC_ETHER_NIC_RESETS], 1);
+	if_mbed_stop(p_cellcb);
+	if_mbed_init_sub(p_cellcb);
+
+    ethernetext_start_stop(1);
+ }
